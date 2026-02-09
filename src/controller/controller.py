@@ -52,39 +52,10 @@ class Controller:
             self.append_network_graph()
     
     def plot_opinion_history(self) -> None:
-        View.plot_opinion_history(self, self.opinion_history)
+        View.plot_opinion_history(self.opinion_history, self.social_network.n_agents)
     
     def display_network_graphs_animation(self, include_self_loops: bool = False) -> None:
-        """
-        This method displays a Matplotlib figure that allows navigating through the network graphs of each iteration using left and right arrow keys.
-        """
-        fig, ax = plt.subplots()
-        position = self.social_network.get_node_positions()
-        total_graphs = len(self.network_graphs)
-        current_index = [0]  # Mutable container to track the current graph index
-
-        def draw_graph(index: int) -> None:
-            ax.clear()
-            View.display_network_graph(
-                graph=self.network_graphs[index],
-                position=position,
-                include_self_loops=include_self_loops,
-                ax=ax
-            )
-            ax.set_title(f"Iteration {index}")
-            fig.canvas.draw_idle()
-        
-        def on_key(event) -> None:
-            if event.key == 'right':
-                current_index[0] = (current_index[0] + 1) % total_graphs
-            elif event.key == 'left':
-                current_index[0] = (current_index[0] - 1) % total_graphs
-
-            draw_graph(current_index[0])
-
-        fig.canvas.mpl_connect('key_press_event', on_key)
-        draw_graph(current_index[0])
-        plt.show()        
+        View.display_network_graphs_animation(self.network_graphs, self.social_network, include_self_loops)     
 
     def get_first_opinion_vector(self) -> np.ndarray:
         return self.opinion_history[0]

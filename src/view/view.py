@@ -3,22 +3,23 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List
+from model.social_network import SocialNetwork
 
 
 class View:
 
     @staticmethod
-    def plot_opinion_history(self, opinion_history: List[np.ndarray]) -> None:
+    def plot_opinion_history(opinion_history: List[np.ndarray], n_agents: int) -> None:
         """
         This method plots the opinion history of all agents over time.
         """
         # Reshape the opinion history into a 2D array where each row corresponds to an agent and each column corresponds to a time step
-        opinions = np.hstack(self.opinion_history)
-        n_iterations = len(self.opinion_history)
+        opinions = np.hstack(opinion_history)
+        n_iterations = len(opinion_history)
         iteration_range = range(n_iterations)
 
         plt.figure()
-        for agent_index in range(self.social_network.n_agents):
+        for agent_index in range(n_agents):
             plt.plot(
                 iteration_range,
                 opinions[agent_index, :],
@@ -39,7 +40,7 @@ class View:
     def display_network_graph(graph: nx.DiGraph, position: dict, include_self_loops: bool = False, ax=None) -> None:
         """
         This method prints the network graph using Matplotlib and NetworkX.
-        It is necesaary to make sur that when two agents influence each other, the edges are drawn with curves to avoid overlapping.
+        It is necessary to make sure that when two agents influence each other, the edges are drawn with curves to avoid overlapping.
         In the case of one-directional influence, straight edges are drawn.
         It is also possible to exclude self-loops from the visualization by setting include_self_loops to False.
         """
@@ -98,3 +99,36 @@ class View:
             label_pos=0.5,
             ax=ax
         )
+
+    @staticmethod
+    def display_network_graphs_animation(network_graphs: List[nx.DiGraph], social_network: SocialNetwork, include_self_loops: bool = False) -> None:
+        """
+        This method displays a Matplotlib figure that allows navigating through the network graphs of each iteration using left and right arrow keys.
+        """
+        fig, ax = plt.subplots()
+        position = social_network.get_node_positions()
+        total_graphs = len(network_graphs)
+        current_index = [0]  # Mutable container to track the current graph index
+
+        def draw_graph(index: int) -> None:
+            ax.clear()
+            View.display_network_graph(
+                graph=network_graphs[index],
+                position=position,
+                include_self_loops=include_self_loops,
+                ax=ax
+            )
+            ax.set_title(f"Iteration {index}")
+            fig.canvas.draw_idle()
+        
+        def on_key(event) -> None:
+            if event.key == 'right':
+                current_index[0] = (current_index[0] + 1) % total_graphs
+            elif event.key == 'left':
+                current_index[0] = (current_index[0] - 1) % total_graphs
+
+            draw_graph(current_index[0])
+
+        fig.canvas.mpl_connect('key_press_event', on_key)
+        draw_graph(current_index[0])
+        plt.show()    

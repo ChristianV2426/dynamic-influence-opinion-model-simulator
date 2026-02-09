@@ -9,5 +9,5 @@ if __name__ == "__main__":
         else:
             print(f"Test {number_of_test} is not defined.")
             
-    except ValueError:
-        print("Please enter a valid integer for the test number.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
