@@ -4,7 +4,6 @@ from typing import Callable, Optional, List
 
 
 class Agent:
-
     def __init__(
             self, 
             index: int,
@@ -12,6 +11,17 @@ class Agent:
             influence_of_others: NDArray[np.float64],
             influence_change_functions: Optional[List[Callable[..., float]]] = None
             ) -> None:
+        """
+        This class represents an agent in a network with an opinion and influence on other agents.
+
+        Attributes:
+            index (int): The unique identifier for the agent.
+            opinion (float): The current opinion of the agent, in the range [0.0, 1.0].
+            influence_of_others (NDArray[np.float64]): A 1-D numpy array representing the influence of other agents on this agent. The sum of this array should be 1.0.
+            influence_change_functions (Optional[List[Callable[..., float]]]): A list of functions that define how the influence of other agents changes over time. Each function corresponds to an agent in the network and takes parameters such as iteration number, own index, other agent index, current influence value, and any additional keyword arguments.
+            iteration (int): The current iteration or time step in the simulation. Automatically initialized to 0.
+            agents_in_network (int): The total number of agents in the network. Automatically determined from the length of the influence_of_others array.
+        """
         self.index = index
         self.opinion = opinion
         self.influence_of_others = influence_of_others
@@ -38,6 +48,9 @@ class Agent:
     
     def set_influence_change_functions(self, functions: List[Callable[..., float]]) -> None:
         self.influence_change_functions = functions
+
+    def get_iteration(self) -> int:
+        return self.iteration
     
     def add_iteration(self) -> None:
         self.iteration += 1
@@ -72,6 +85,8 @@ class Agent:
     def update_influence_of_others(self, **kwargs) -> None:
         """
         This method updates the agent's influence_of_others vector by applying the corresponding influence change functions.
+
+        This method is useful for recreating results such as those stated in the paper by Chatterjee and Seneta (1977) for "open-minded" agents.
         
         Steps:
         1) Check if a vector of influence change functions is provided. If not, do nothing.
@@ -95,6 +110,8 @@ class Agent:
     def update_influence_of_others_v2(self, distribution_function: Callable[[float], float], last_opinion_vector: np.ndarray) -> None:
         """
         This method updates the agent's influence_of_others vector based on the distribution function and the last opinion vector of all agents in the network.
+        
+        This method is useful for implementing dynamic influence mechanisms driven by homophily.
 
         Steps:
         1) Check if the agent has all the influence on itself (i.e., influence_of_others[self.index] is close to 1). If so, skip the update to avoid unnecessary calculations.
@@ -105,25 +122,16 @@ class Agent:
             return
 
         if distribution_function is not None:
-            # influence_to_redistribute = 1.0 - self.influence_of_others[self.index]
             distribution_vector = np.zeros(self.agents_in_network, dtype=np.float64)
 
             for i in range(self.agents_in_network):
-                # if i != self.index and self.influence_of_others[i] != 0.0:
                 if self.influence_of_others[i] != 0.0:
                     difference_opinion = abs(last_opinion_vector[i] - last_opinion_vector[self.index])
                     distribution_vector[i] = distribution_function(difference_opinion)
 
             self.influence_of_others = distribution_vector / distribution_vector.sum()
-            # print(f"Agent {self.index} updated influence_of_others to:\n", self.influence_of_others)
-            
-            # for i in range(self.agents_in_network):
-                # if i != self.index:
-                #     self.influence_of_others[i] = influence_to_redistribute * distribution_vector[i]distribution_vector[i]
-            
             self.normalize_influence()
-            # print(f"Agent {self.index} normalized influence_of_others to:\n", self.influence_of_others, "\n")
-    
+
     @staticmethod
     def generate_random_agent(index: int, n_agents: int, seed: Optional[int] = None) -> 'Agent':
         """
@@ -132,6 +140,7 @@ class Agent:
         if seed is not None:
             np.random.seed(seed + index)
 
+        # The beta distribution generates probabilities values close to the extremes (near 0.0 and 1.0), resulting in polarized initial opinions.  
         opinion = np.random.beta(0.5, 0.5)
         influence_of_others = np.random.beta(0.5, 0.5, size=n_agents).astype(np.float64)
         

@@ -6,6 +6,16 @@ from model import Agent
 
 class SocialNetwork:
     def __init__(self, agents: List[Agent], distribution_function: Callable[[float], float] = None) -> None:
+        """
+        This class represents a social network of agents, where each agent has an opinion and influences others in the network.
+
+        Attributes:
+            agents (List[Agent]): A list of Agent objects representing the agents in the network.
+            distribution_function (Callable[[float], float]): A function that defines how influence is distributed based on difference of opinions (homophily). This function takes a float (difference of opinion) and returns a float.
+            n_agents (int): The total number of agents in the network. This is automatically determined from the length of the agents list.
+            graph (nx.DiGraph): A directed graph representing the influence relationships between agents, constructed from the influence matrix. This is automatically created.
+            node_positions (dict): A dictionary mapping agent indices to their positions in the graph layout for visualization purposes. This is automatically calculated using NetworkX's spring layout algorithm.  
+        """
         self.agents = agents
         self.distribution_function = distribution_function
 
@@ -36,8 +46,7 @@ class SocialNetwork:
 
     def update_graph(self) -> None:
         """
-        This method creates a directed graph from the influence matrix. It's necessary to transpose the matrix because in DeGroot model,
-        rows represent how an agent is influenced by others, while in NetworkX, edges go from influencer to influencee.
+        This method creates a directed graph from the influence matrix. It's necessary to transpose the matrix because in DeGroot model, rows represent how an agent is influenced by others, while in NetworkX, edges go from influencer to influencee.
         """
         self.graph = nx.from_numpy_array(self.influence_matrix.T, create_using=nx.DiGraph)
         self.graph = nx.relabel_nodes(self.graph, lambda i: self.agents[i].index, copy=False)
@@ -77,7 +86,9 @@ class SocialNetwork:
     def update_influences(self, **kwargs) -> None:
         """
         This method updates the influence matrix by asking each agent to update its influence_of_others vector.
-        After updating each agent's influence_of_others, the influence matrix is reconstructed
+        After updating each agent's influence_of_others, the influence matrix is reconstructed.
+
+        This method is useful for recreating results such as those stated in the paper by Chatterjee and Seneta (1977) for "open-minded" agents.
         """
         for i, agent in enumerate(self.agents):
             agent.update_influence_of_others(**kwargs)
@@ -86,12 +97,13 @@ class SocialNetwork:
     def update_influences_v2(self, last_opinion_vector: np.ndarray) -> None:
         """
         This method updates the influence matrix by asking each agent to update its influence_of_others vector using the distribution function and the last opinion vector of all agents in the network.
-        After updating each agent's influence_of_others, the influence matrix is reconstructed
+        After updating each agent's influence_of_others, the influence matrix is reconstructed.
+
+        This method is useful for implementing dynamic influence mechanisms driven by homophily.
         """
         for i, agent in enumerate(self.agents):
             agent.update_influence_of_others_v2(self.distribution_function, last_opinion_vector.flatten())
-            self.influence_matrix[i, :] = agent.get_influence_of_others()
-        
+            self.influence_matrix[i, :] = agent.get_influence_of_others()   
     
     @staticmethod
     def generate_random_social_network(n_agents: int, seed: Optional[int] = None) -> 'SocialNetwork':
@@ -99,7 +111,6 @@ class SocialNetwork:
             seed = np.random.randint(0, 1_000_000_000)
             print(f"Generated seed for social network: {seed}")
             
-
         agents = [Agent.generate_random_agent(index=i, n_agents=n_agents, seed=seed) for i in range(n_agents)]
         return SocialNetwork(agents=agents)
         

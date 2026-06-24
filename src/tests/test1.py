@@ -42,17 +42,19 @@ def test1():
     ]
     influence_chage_functions = None
 
-    gamma = 1000
+    gamma = 100
 
     def distribution_function(opinion_difference: float) -> float:
-        return 1.0 / (1.0 + gamma * opinion_difference**2)
-        # return exp(-gamma * opinion_difference**2)
+        # return 1.0 / (1.0 + gamma * opinion_difference**2)
+        return exp(-gamma * opinion_difference)
     
     social_network = SocialNetwork.generate_random_social_network(n_agents=n_agents, seed=seed)
     social_network.set_influence_functions_of_agents(influence_chage_functions)
     social_network.set_distribution_function(distribution_function)
     controller = Controller(social_network=social_network, n_iterations=18)
     controller.run_simulation_v2()
-    # controller.display_network_graphs_animation(include_self_loops=True)
+    controller.display_network_graphs_animation(include_self_loops=True, filter_vertex=3)
     controller.plot_opinion_history()
+    controller.print_last_influence_matrices()
     # print(controller.get_last_opinion_vector())
+    # print(controller.get_first_opinion_vector())

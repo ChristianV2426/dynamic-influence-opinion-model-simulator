@@ -55,6 +55,6 @@ def test3():
     social_network.set_influence_functions_of_agents(influence_chage_functions)
     controller = Controller(social_network=social_network, n_iterations=10)
     controller.run_simulation()
-    # controller.display_network_graphs_animation(include_self_loops=True)
+    controller.display_network_graphs_animation(include_self_loops=True)
     controller.plot_opinion_history()
     print(controller.get_last_opinion_vector())
