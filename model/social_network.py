@@ -1,133 +1,198 @@
+from typing import Callable, Optional, Sequence
 import networkx as nx
 import numpy as np
-from typing import Callable, List, Optional
 
 from .agent import Agent
-from .precision import matrix, mp_zeros_matrix, to_float64_matrix
 
 
 class SocialNetwork:
-    def __init__(self, agents: List[Agent], distribution_function: Callable = None) -> None:
-        """
-        Represent a social network of agents and influence relationships.
+    """
+    Represent the agents and their fixed influence connections.
 
-        The network owns the opinion vector, influence matrix, and directed
-        graph used for visualization. The distribution function is used by the
-        dynamic influence update to assign weights from opinion differences.
-        """
-        self.agents = agents
+    - agents: Network agents, indexed consecutively from zero; each influence row must contain one entry per agent.
+    - distribution_function: One network-wide function that maps the distance between a neighbor's public opinion and the agent's private opinion to a positive influence value; required if any agent has dynamic influence.
+    """
+
+    def __init__(
+        self,
+        agents: Sequence[Agent],
+        distribution_function: Optional[Callable[[float], float]] = None,
+    ) -> None:
+        agent_list = list(agents)
+
+        if not agent_list or any(not isinstance(agent, Agent) for agent in agent_list):
+            raise ValueError("agents must be a non-empty sequence of Agent instances")
+
+        self.agents = sorted(agent_list, key=lambda agent: agent.index)
+        self.n_agents = len(self.agents)
+
+        if [agent.index for agent in self.agents] != list(range(self.n_agents)):
+            raise ValueError("agent indices must be consecutive from zero")
+
+        if len({agent.name for agent in self.agents}) != self.n_agents:
+            raise ValueError("agent names must be unique")
+
+        if any(agent.influence_of_others.size != self.n_agents for agent in self.agents):
+            raise ValueError("each influence row must have one entry per agent")
+
+        if distribution_function is not None and not callable(distribution_function):
+            raise ValueError("distribution_function must be callable")
+
+        if any(agent.dynamic_influence for agent in self.agents) and distribution_function is None:
+            raise ValueError("dynamic agents require a distribution_function")
+
         self.distribution_function = distribution_function
+        self._connections = self.influence_matrix > 0
 
-        self.n_agents = len(agents)
-        self.graph = None
-        self.node_positions = None
+    @property
+    def opinion_vector(self) -> np.ndarray:
+        """Return each agent's current internal (private) opinion, which keeps evolving even while silent."""
+        return np.array([agent.opinion for agent in self.agents], dtype=np.float64)
 
-        self.sort_agents_by_index()
-        self.init_opinion_vector()
-        self.init_influence_matrix()
-        self.update_graph()
-        self.node_positions = nx.spring_layout(self.graph, seed=42)
+    @property
+    def public_opinion_vector(self) -> np.ndarray:
+        """Return each agent's public-opinion value, which can lag behind the internal (private) opinion with memory."""
+        return np.array([agent.public_opinion for agent in self.agents], dtype=np.float64)
 
-    def sort_agents_by_index(self) -> None:
-        self.agents.sort(key=lambda agent: agent.index)
-
-    def init_opinion_vector(self) -> None:
-        """Build the n x 1 opinion vector from the agents' current opinions."""
-        self.opinion_vector = mp_zeros_matrix(self.n_agents, 1)
-        for i, agent in enumerate(self.agents):
-            self.opinion_vector[i, 0] = agent.get_opinion()
-
-    def init_influence_matrix(self) -> None:
+    @property
+    def opinion_participation_vector(self) -> np.ndarray:
         """
-        Build the influence matrix from each agent's influence vector.
+        Return a vector of 1s and 0s indicating which agents' public opinions contribute to others' opinion updates; a silent memory agent still contributes with its last public opinion.
 
-        Row i contains the weights used to update agent i's opinion.
+        - A DeGroot agent always contributes its current opinion.
+        - A memoryless agent contributes its current opinion only while speaking.
+        - A memory agent always contributes its last public opinion (while it is speaking, the last public opinion is the current opinion).
         """
-        self.influence_matrix = mp_zeros_matrix(self.n_agents, self.n_agents)
-        for i, agent in enumerate(self.agents):
-            agent_row = agent.get_influence_of_others()
-            for j in range(self.n_agents):
-                self.influence_matrix[i, j] = agent_row[j, 0]
+        return np.array([agent.opinion_participation for agent in self.agents], dtype=np.float64)
 
-    def update_graph(self) -> None:
+    @property
+    def speaking_vector(self) -> np.ndarray:
         """
-        Build the directed graph used for visualization.
-
-        The influence matrix is transposed because DeGroot rows represent how an
-        agent is influenced by others, while NetworkX edges point from
-        influencer to influenced agent.
+        Return the speaking state of each agent. 
+        
+        - A DeGroot agent is always speaking.
+        - A memoryless agent is speaking only while it is contributing its current opinion (its opinion_participation and speaking states are the same at all times).
+        - A memory agent can be speaking or silent, but it always contributes its last public opinion to others' opinion updates (its opinion_participation is always 1).
         """
-        float_matrix = to_float64_matrix(self.influence_matrix)
-        self.graph = nx.from_numpy_array(float_matrix.T, create_using=nx.DiGraph)
-        self.graph = nx.relabel_nodes(self.graph, lambda i: self.agents[i].index, copy=False)
+        return np.array([agent.speaking for agent in self.agents], dtype=np.bool_)
 
-    def get_influence_matrix(self) -> matrix:
-        return self.influence_matrix
+    @property
+    def influence_matrix(self) -> np.ndarray:
+        """
+        Return a copy of the influence matrix, with row i holding the weights received by agent i from each agent j.
+        """
+        return np.vstack([agent.influence_of_others for agent in self.agents])
 
-    def get_opinion_vector(self) -> matrix:
-        return self.opinion_vector
+    def calculate_next_opinions(
+        self,
+        opinions: np.ndarray,
+        public_opinions: np.ndarray,
+        participation: np.ndarray,
+        influences: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Calculate X_i(t+1) = X_i(t) + sum over neighbors j of A_ij(t) S_j(t) [P_j(t) - X_i(t)].
+        Expanded: X_i(t+1) = X_i(t) + sum of A_ij(t) S_j(t) P_j(t) - X_i(t) times the sum of A_ij(t) S_j(t).
+        opinions contains internal (private) opinions X; public_opinions contains public opinions P.
+        """
+        active_neighbor_influences = influences.copy()
+        np.fill_diagonal(active_neighbor_influences, 0.0)
+        active_neighbor_influences *= participation[np.newaxis, :]
 
-    def get_graph(self) -> nx.DiGraph:
-        return self.graph
+        public_term = active_neighbor_influences @ public_opinions
+        private_term = opinions * active_neighbor_influences.sum(axis=1)
 
-    def get_node_positions(self) -> dict:
-        return self.node_positions
+        return opinions + public_term - private_term
 
-    def set_influence_functions_of_agents(self, functions: List[Callable[..., float]]) -> None:
-        """Assign the same influence-change function list to every agent."""
+    def calculate_next_speaking(
+        self,
+        public_opinions: np.ndarray,
+        participation: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Decide next speaking states from the current agent opinions and supplied public opinions, excluding self-connections.
+        """
+        next_speaking = np.empty(self.n_agents, dtype=np.bool_)
+
         for agent in self.agents:
-            agent.set_influence_change_functions(functions)
+            neighbors = self._connections[agent.index].copy()
+            neighbors[agent.index] = False
 
-    def set_distribution_function(self, distribution_function: Callable) -> None:
-        """Set the function used by the dynamic influence update."""
-        self.distribution_function = distribution_function
+            next_speaking[agent.index] = agent.decide_speaking(
+                public_opinions[neighbors],
+                participation[neighbors],
+            )
 
-    def update_opinions(self) -> None:
+        return next_speaking
+
+    def calculate_next_influences(
+            self, 
+            opinions: np.ndarray,
+            public_opinions: np.ndarray,
+            influences: np.ndarray,
+            participation: np.ndarray,
+    ) -> np.ndarray:
         """
-        Update opinions according to the DeGroot model.
-
-        The influence matrix multiplies the current opinion vector. The result
-        is stored in the network and copied back to each agent.
+        Redistribute only the weights of participating neighbors in dynamic rows.
+        Silent memoryless neighbors retain their weights until they participate again.
+        An agent's distance from itself is always zero, even when its public opinion is outdated.
         """
-        self.opinion_vector = self.influence_matrix * self.opinion_vector
+        next_influences = influences.copy()
+        participating = participation.astype(np.bool_)
 
-        for i, agent in enumerate(self.agents):
-            agent.set_opinion(self.opinion_vector[i, 0])
-            agent.add_iteration()
+        for agent in self.agents:
+            if not agent.dynamic_influence:
+                continue
 
-    def update_influences(self, **kwargs) -> None:
+            neighbors = self._connections[agent.index]
+            active_neighbors = neighbors & participating
+            active_neighbors[agent.index] = neighbors[agent.index]
+
+            if not np.any(active_neighbors):
+                continue
+
+            # Compute the difference between public and private opinions for all positions so agent.index still points to this agent's distance.
+            differences = np.abs(public_opinions - opinions[agent.index])
+            differences[agent.index] = 0.0
+            # Select existing connections only after setting the self-distance to zero.
+            values = np.array([self.distribution_function(float(difference)) for difference in differences[active_neighbors]], dtype=np.float64)
+
+            if not np.all(np.isfinite(values)) or np.any(values <= 0):
+                raise ValueError("distribution_function must return finite, positive values for existing connections")
+
+            total = float(np.sum(values))
+
+            if not np.isfinite(total) or total <= 0:
+                raise ValueError("sum of distribution values must be finite and positive")
+
+            # The active weights sum to one minus the unchanged weights of silent memoryless neighbors.
+            remaining_weight = float(np.sum(influences[agent.index, active_neighbors]))
+            normalized = remaining_weight * values / total
+
+            if np.any(normalized <= 0):
+                raise ValueError("distribution values are too small to preserve every connection")
+
+            next_influences[agent.index, active_neighbors] = normalized
+
+        return next_influences
+
+    def advance_round(self) -> None:
         """
-        Update the influence matrix using agents' explicit change functions.
-
-        It is useful for recreating results such as those
-        stated in Chatterjee and Seneta (1977) for open-minded agents.
+        Calculate opinions, speaking states, and next influence weights from one frozen round, then apply the completed results.
         """
-        for i, agent in enumerate(self.agents):
-            agent.update_influence_of_others(**kwargs)
-            agent_row = agent.get_influence_of_others()
-            for j in range(self.n_agents):
-                self.influence_matrix[i, j] = agent_row[j, 0]
+        opinions = self.opinion_vector
+        public_opinions = self.public_opinion_vector
+        participation = self.opinion_participation_vector
+        influences = self.influence_matrix
 
-    def update_influences_v2(self, last_opinion_vector: matrix) -> None:
-        """
-        Update the influence matrix from the previous opinion vector.
+        next_opinions = self.calculate_next_opinions(opinions, public_opinions, participation, influences)
+        next_speaking = self.calculate_next_speaking(public_opinions, participation)
+        next_influences = self.calculate_next_influences(opinions, public_opinions, influences, participation)
 
-        Each agent recomputes its non-zero influence weights using the network's
-        distribution function. This method is useful for implementing dynamic
-        influence mechanisms driven by homophily.
-        """
-        for i, agent in enumerate(self.agents):
-            agent.update_influence_of_others_v2(self.distribution_function, last_opinion_vector)
-            agent_row = agent.get_influence_of_others()
-            for j in range(self.n_agents):
-                self.influence_matrix[i, j] = agent_row[j, 0]
+        if not np.all(np.isfinite(next_opinions)) or np.any((next_opinions < 0) | (next_opinions > 1)):
+            raise ValueError("calculated opinions must be in [0, 1]")
 
-    @staticmethod
-    def generate_random_social_network(n_agents: int, seed: Optional[int] = None) -> 'SocialNetwork':
-        """Generate a social network with random agents."""
-        if seed is None:
-            seed = np.random.randint(0, 1_000_000_000)
-            print(f"Generated seed for social network: {seed}")
-
-        agents = [Agent.generate_random_agent(index=i, n_agents=n_agents, seed=seed) for i in range(n_agents)]
-        return SocialNetwork(agents=agents)
+        for agent in self.agents:
+            if agent.dynamic_influence:
+                agent.set_influence_of_others(next_influences[agent.index])
+            agent.advance(float(next_opinions[agent.index]), bool(next_speaking[agent.index]))
