@@ -1,0 +1,12 @@
+{
+  "mode": "random",
+  "iterationLimit": 100,
+  "consensusThreshold": 0.001,
+  "nAgents": 1000,
+  "neighborsPerAgent": 6,
+  "rewiringProbability": 0.25,
+  "seed": 24,
+  "allowedAgentTypes": [
+    {"silenceMode": "none", "dynamicInfluence": false}
+  ]
+}

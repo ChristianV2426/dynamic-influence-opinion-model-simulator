@@ -8,8 +8,27 @@ from model.agent import Agent
 from model.social_network import SocialNetwork
 
 
+def _gaussian_distribution(data: dict[str, Any]) -> Callable[[float], float]:
+    """Build f(d) = exp(-gamma * d²) from its JSON parameters."""
+    SimulationParser._fields(data, {"type", "gamma"}, "distributionFunction")
+    gamma = SimulationParser._number(
+        SimulationParser._required(data, "gamma", "distributionFunction"),
+        "distributionFunction.gamma",
+    )
+    if gamma <= 0:
+        raise ValueError("distributionFunction.gamma must be positive")
+
+    def gaussian(distance: float) -> float:
+        return math.exp(-gamma * distance ** 2)
+
+    return gaussian
+
+
 class SimulationParser:
     """Build a simulation from a JSON configuration."""
+
+    # Add new JSON distribution types here, each with a parameter-validating builder.
+    DISTRIBUTION_FUNCTIONS = {"gaussian": _gaussian_distribution}
 
     COMMON_FIELDS = {"mode", "iterationLimit", "consensusThreshold", "recordInfluenceHistory",
                      "recordMinimumInfluence", "distributionFunction",}
@@ -70,6 +89,7 @@ class SimulationParser:
                 "name", "opinion", "dynamicInfluence", "silenceMode",
                 "toleranceRadius", "majorityThreshold",
             }, label)
+
             name = cls._required(data, "name", label)
             if not isinstance(name, str) or not name.strip() or name in names:
                 raise ValueError(f"{label}.name must be a unique, non-empty string")
@@ -85,16 +105,20 @@ class SimulationParser:
             cls._fields(data, {"source", "target", "influence"}, label)
             source = cls._required(data, "source", label)
             target = cls._required(data, "target", label)
+
             if (not isinstance(source, str) or not isinstance(target, str)
                     or source not in indices or target not in indices):
                 raise ValueError(f"{label} must refer to agent names in source and target")
+            
             if (source, target) in seen_edges:
                 raise ValueError(f"{label} duplicates the edge from {source} to {target}")
+            
             seen_edges.add((source, target))
 
             influence = cls._number(cls._required(data, "influence", label), f"{label}.influence")
             if influence < 0:
                 raise ValueError(f"{label}.influence must be non-negative")
+            
             # source influences target: row target receives weight from column source.
             weights[indices[target]][indices[source]] = influence
 
@@ -103,9 +127,8 @@ class SimulationParser:
 
         agents = []
         for index, data in enumerate(agent_data):
-            opinion = cls._number(
-                cls._required(data, "opinion", f"agents[{index}]"), f"agents[{index}].opinion"
-            )
+            opinion = cls._number(cls._required(data, "opinion", f"agents[{index}]"), f"agents[{index}].opinion")
+
             agents.append(Agent(
                 index=index,
                 name=names[index],
@@ -118,15 +141,19 @@ class SimulationParser:
             ))
 
         dynamic = any(agent.dynamic_influence for agent in agents)
+
         return SocialNetwork(agents, distribution_function=cls._distribution_function(configuration, dynamic))
 
     @classmethod
     def _random_network(cls, configuration: dict[str, Any]) -> SocialNetwork:
         types = configuration.get("allowedAgentTypes")
+
         if types is not None:
             if not isinstance(types, list) or not types:
                 raise ValueError("allowedAgentTypes must be a non-empty list")
+            
             allowed_types = []
+
             for index, data in enumerate(types):
                 label = f"allowedAgentTypes[{index}]"
                 cls._object(data, label)
@@ -138,9 +165,8 @@ class SimulationParser:
         else:
             allowed_types = None
 
-        dynamic = allowed_types is not None and any(
-            isinstance(agent_type[1], bool) and agent_type[1] for agent_type in allowed_types
-        )
+        dynamic = allowed_types is not None and any(isinstance(agent_type[1], bool) and agent_type[1] for agent_type in allowed_types)
+
         return SocialNetwork.generate_random_network(
             n_agents=cls._required(configuration, "nAgents", "configuration"),
             neighbors_per_agent=cls._required(configuration, "neighborsPerAgent", "configuration"),
@@ -157,27 +183,21 @@ class SimulationParser:
         )
 
     @classmethod
-    def _distribution_function(
-        cls, configuration: dict[str, Any], dynamic: bool
-    ) -> Callable[[float], float] | None:
+    def _distribution_function(cls, configuration: dict[str, Any], dynamic: bool) -> Callable[[float], float] | None:
         data = configuration.get("distributionFunction")
+
         if data is None:
             if dynamic:
                 raise ValueError("distributionFunction is required for dynamic agents")
             return None
 
         cls._object(data, "distributionFunction")
-        cls._fields(data, {"type", "gamma"}, "distributionFunction")
-        if cls._required(data, "type", "distributionFunction") != "gaussian":
-            raise ValueError("distributionFunction.type must be 'gaussian'")
-        gamma = cls._number(cls._required(data, "gamma", "distributionFunction"), "distributionFunction.gamma")
-        if gamma <= 0:
-            raise ValueError("distributionFunction.gamma must be positive")
+        function_type = cls._required(data, "type", "distributionFunction")
+        
+        if not isinstance(function_type, str) or function_type not in cls.DISTRIBUTION_FUNCTIONS:
+            raise ValueError(f"distributionFunction.type must be one of {tuple(cls.DISTRIBUTION_FUNCTIONS)}")
 
-        def gaussian(distance: float) -> float:
-            return math.exp(-gamma * distance ** 2)
-
-        return gaussian
+        return cls.DISTRIBUTION_FUNCTIONS[function_type](data)
 
     @staticmethod
     def _object(value: Any, label: str) -> None:
@@ -200,10 +220,13 @@ class SimulationParser:
     def _number(value: Any, label: str) -> float:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise ValueError(f"{label} must be a finite number")
+        
         try:
             number = float(value)
         except OverflowError as exc:
             raise ValueError(f"{label} must be a finite number") from exc
+        
         if not math.isfinite(number):
             raise ValueError(f"{label} must be a finite number")
+        
         return number

@@ -14,7 +14,7 @@ def main() -> int:
     parser.add_argument("configuration", type=Path, help="Path to the simulation JSON file")
 
     parser.add_argument(
-        "--plot", nargs="+", choices=("opinions", "private-public", "network", "minimum-influence"),
+        "--plot", nargs="+", choices=("opinions", "opinions-with-silence", "private-public", "network", "minimum-influence"),
         default=["opinions"], help="Plots to display (default: opinions)",
     )
     args = parser.parse_args()
@@ -34,6 +34,10 @@ def main() -> int:
         for plot in args.plot:
             if plot == "opinions":
                 View.plot_opinion_history(controller.opinion_history, names, show=False)
+
+            elif plot == "opinions-with-silence":
+                View.plot_opinion_history_with_silence(
+                    controller.opinion_history, controller.speaking_history, names, show=False)
 
             elif plot == "private-public":
                 View.plot_private_public_opinion_history(
