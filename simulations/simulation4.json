@@ -1,0 +1,12 @@
+{
+  "mode": "custom",
+  "iterationLimit": 30,
+  "agents": [
+    {"name": "Agent1", "opinion": 1.0, "silenceMode": "memoryless", "toleranceRadius": 1.0, "majorityThreshold": 0.5},
+    {"name": "Agent2", "opinion": 0.0, "silenceMode": "memoryless", "toleranceRadius": 1.0, "majorityThreshold": 0.5}
+  ],
+  "edges": [
+    {"target": "Agent1", "source": "Agent2", "influence": 1.0},
+    {"target": "Agent2", "source": "Agent1", "influence": 1.0}
+  ]
+}

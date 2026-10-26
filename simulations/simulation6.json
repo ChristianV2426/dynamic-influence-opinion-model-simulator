@@ -1,0 +1,45 @@
+{
+  "mode": "custom",
+  "iterationLimit": 25,
+  "agents": [
+    {"name": "Agent1", "opinion": 0.1, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5},
+    {"name": "Agent2", "opinion": 0.2, "silenceMode": "memoryless", "toleranceRadius": 0.05, "majorityThreshold": 0.5},
+    {"name": "Agent3", "opinion": 0.15, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5},
+    {"name": "Agent4", "opinion": 1.0, "silenceMode": "memoryless", "toleranceRadius": 0.85, "majorityThreshold": 0.5},
+    {"name": "Agent5", "opinion": 0.85, "silenceMode": "memoryless", "toleranceRadius": 0.6, "majorityThreshold": 0.5},
+    {"name": "Agent6", "opinion": 0.25, "silenceMode": "memoryless", "toleranceRadius": 0.05, "majorityThreshold": 0.5},
+    {"name": "Agent7", "opinion": 0.3, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5},
+    {"name": "Agent8", "opinion": 0.05, "silenceMode": "memoryless", "toleranceRadius": 0.05, "majorityThreshold": 0.5}
+  ],
+  "edges": [
+    {"target": "Agent1", "source": "Agent1", "influence": 0.8},
+    {"target": "Agent1", "source": "Agent4", "influence": 0.2},
+
+    {"target": "Agent2", "source": "Agent2", "influence": 0.8},
+    {"target": "Agent2", "source": "Agent4", "influence": 0.2},
+
+    {"target": "Agent3", "source": "Agent3", "influence": 0.8},
+    {"target": "Agent3", "source": "Agent4", "influence": 0.2},
+
+    {"target": "Agent4", "source": "Agent1", "influence": 0.05},
+    {"target": "Agent4", "source": "Agent2", "influence": 0.1},
+    {"target": "Agent4", "source": "Agent3", "influence": 0.1},
+    {"target": "Agent4", "source": "Agent4", "influence": 0.5},
+    {"target": "Agent4", "source": "Agent5", "influence": 0.25},
+
+    {"target": "Agent5", "source": "Agent4", "influence": 0.5},
+    {"target": "Agent5", "source": "Agent5", "influence": 0.25},
+    {"target": "Agent5", "source": "Agent6", "influence": 0.1},
+    {"target": "Agent5", "source": "Agent7", "influence": 0.1},
+    {"target": "Agent5", "source": "Agent8", "influence": 0.05},
+
+    {"target": "Agent6", "source": "Agent5", "influence": 0.2},
+    {"target": "Agent6", "source": "Agent6", "influence": 0.8},
+
+    {"target": "Agent7", "source": "Agent5", "influence": 0.2},
+    {"target": "Agent7", "source": "Agent7", "influence": 0.8},
+
+    {"target": "Agent8", "source": "Agent5", "influence": 0.2},
+    {"target": "Agent8", "source": "Agent8", "influence": 0.8}
+  ]
+}

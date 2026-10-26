@@ -1,0 +1,32 @@
+{
+  "mode": "custom",
+  "iterationLimit": 50,
+  "consensusThreshold": 0.001,
+  "agents": [
+    {"name": "Agent1", "opinion": 0.0, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5},
+    {"name": "Agent2", "opinion": 0.25, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5},
+    {"name": "Agent3", "opinion": 0.75, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5},
+    {"name": "Agent4", "opinion": 1.0, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5}
+  ],
+  "edges": [
+    {"target": "Agent1", "source": "Agent1", "influence": 0.9},
+    {"target": "Agent1", "source": "Agent2", "influence": 0.034},
+    {"target": "Agent1", "source": "Agent3", "influence": 0.033},
+    {"target": "Agent1", "source": "Agent4", "influence": 0.033},
+
+    {"target": "Agent2", "source": "Agent1", "influence": 0.033},
+    {"target": "Agent2", "source": "Agent2", "influence": 0.9},
+    {"target": "Agent2", "source": "Agent3", "influence": 0.034},
+    {"target": "Agent2", "source": "Agent4", "influence": 0.033},
+
+    {"target": "Agent3", "source": "Agent1", "influence": 0.033},
+    {"target": "Agent3", "source": "Agent2", "influence": 0.033},
+    {"target": "Agent3", "source": "Agent3", "influence": 0.9},
+    {"target": "Agent3", "source": "Agent4", "influence": 0.034},
+
+    {"target": "Agent4", "source": "Agent1", "influence": 0.034},
+    {"target": "Agent4", "source": "Agent2", "influence": 0.033},
+    {"target": "Agent4", "source": "Agent3", "influence": 0.033},
+    {"target": "Agent4", "source": "Agent4", "influence": 0.9}
+  ]
+}

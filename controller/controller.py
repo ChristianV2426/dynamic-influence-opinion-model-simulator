@@ -1,207 +1,101 @@
-from collections import deque
-from typing import List
+from typing import List, Optional
+import numpy as np
 
-from model import SocialNetwork
-from model.precision import matrix, mp, mp_copy, mp_eye
-from view import View
+from model.social_network import SocialNetwork
 
 
 class Controller:
-    def __init__(self, social_network: SocialNetwork, n_iterations: int) -> None:
-        """
-        Coordinate the simulation between the model and the view.
+    """
+    Run a social network and retain the states needed to inspect its evolution.
 
-        The controller stores opinion history, recent influence matrices, graph
-        snapshots for animation, and backward products for analytical checks.
-        """
+    - social_network: Network whose agents and influence weights evolve each round.
+    - n_iterations: Number of opinion-update rounds to execute; the initial state is round zero.
+    - record_influence_history: Whether to retain a full influence matrix at every round.
+    - record_minimum_influence: Whether to retain the smallest positive influence at every round.
+    - consensus_threshold: Optional maximum spread across private and public opinions for early stopping.
+    """
+
+    def __init__(
+        self,
+        social_network: SocialNetwork,
+        n_iterations: int,
+        record_influence_history: bool = False,
+        record_minimum_influence: bool = False,
+        consensus_threshold: Optional[float] = None,
+    ) -> None:
+        if not isinstance(social_network, SocialNetwork):
+            raise ValueError("social_network must be a SocialNetwork instance")
+
+        if isinstance(n_iterations, bool) or not isinstance(n_iterations, int) or n_iterations < 0:
+            raise ValueError("n_iterations must be a non-negative integer")
+
+        if not isinstance(record_influence_history, bool) or not isinstance(record_minimum_influence, bool):
+            raise ValueError("history options must be booleans")
+
+        if consensus_threshold is not None:
+            if isinstance(consensus_threshold, (bool, np.bool_)):
+                raise ValueError("consensus_threshold must be a number in [0, 1]")
+
+            try:
+                consensus_threshold = float(consensus_threshold)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise ValueError("consensus_threshold must be a number in [0, 1]") from exc
+
+            if not np.isfinite(consensus_threshold) or not 0 <= consensus_threshold <= 1:
+                raise ValueError("consensus_threshold must be a number in [0, 1]")
+
         self.social_network = social_network
         self.n_iterations = n_iterations
-        self.opinion_history: List[matrix] = []
-        self.influence_matrix_history: deque = deque(maxlen=10)
-        self.minimum_influence_history: List = []
-        self.backward_product: matrix = None
-        self.network_graphs: List = []
-        self.backward_product_history: List[matrix] = []
+        self.record_influence_history = record_influence_history
+        self.record_minimum_influence = record_minimum_influence
+        self.consensus_threshold = consensus_threshold
+        self.completed_iterations = 0
+        self.stop_reason: Optional[str] = None
 
-        self.append_opinion_vector()
-        self.append_influence_matrix()
-        self.append_minimum_influence()
-        self._initial_influence_matrix: matrix = self.influence_matrix_history[0]
-        self.append_network_graph()
-        self.backward_product = mp_eye(self.social_network.n_agents)
+        self.opinion_history: List[np.ndarray] = []
+        self.public_opinion_history: List[np.ndarray] = []
+        self.speaking_history: List[np.ndarray] = []
+        self.influence_matrix_history: List[np.ndarray] = []
+        self.minimum_influence_history: List[float] = []
 
-    def append_opinion_vector(self) -> None:
-        """Store a copy of the current opinion vector."""
-        self.opinion_history.append(mp_copy(self.social_network.get_opinion_vector()))
+        self._record_state()
 
-    def append_influence_matrix(self) -> None:
-        """Store a copy of the current influence matrix."""
-        self.influence_matrix_history.append(mp_copy(self.social_network.get_influence_matrix()))
+    def _record_state(self) -> None:
+        """Store independent snapshots of the current state after a completed round, including round zero."""
+        self.opinion_history.append(self.social_network.opinion_vector.copy())
+        self.public_opinion_history.append(self.social_network.public_opinion_vector.copy())
+        self.speaking_history.append(self.social_network.speaking_vector.copy())
 
-    def append_minimum_influence(self) -> None:
-        """Store the smallest positive influence in the current influence matrix."""
-        influence_matrix = self.social_network.get_influence_matrix()
-        minimum = None
+        if self.record_influence_history or self.record_minimum_influence:
+            influences = self.social_network.influence_matrix
 
-        for i in range(self.social_network.n_agents):
-            for j in range(self.social_network.n_agents):
-                value = influence_matrix[i, j]
-                if value > 0 and (minimum is None or value < minimum):
-                    minimum = value
+            if self.record_influence_history:
+                self.influence_matrix_history.append(influences.copy())
 
-        self.minimum_influence_history.append(minimum)
+            if self.record_minimum_influence:
+                self.minimum_influence_history.append(float(np.min(influences[influences > 0])))
 
-    def append_network_graph(self) -> None:
-        """Store a copy of the current visualization graph."""
-        self.network_graphs.append(self.social_network.get_graph().copy())
-
-    def append_backward_product(self) -> None:
-        """Store a copy of the current backward product."""
-        self.backward_product_history.append(mp_copy(self.backward_product))
-
-    def _format_influence_matrix(self, mat: matrix) -> str:
-        """Format an influence matrix using the current mpmath precision."""
-        rows = []
-        for i in range(self.social_network.n_agents):
-            row = [
-                mp.nstr(mat[i, j], 200)
-                for j in range(self.social_network.n_agents)
-            ] 
-            rows.append(" ".join(row))
-        return "\n".join(rows)
+    def _has_consensus(self) -> bool:
+        """Check whether private and public opinions fit within one interval of the configured width."""
+        opinions = self.opinion_history[-1]
+        public_opinions = self.public_opinion_history[-1]
+        maximum = max(float(np.max(opinions)), float(np.max(public_opinions)))
+        minimum = min(float(np.min(opinions)), float(np.min(public_opinions)))
+        return maximum - minimum <= self.consensus_threshold
 
     def run_simulation(self) -> None:
-        """
-        Run the standard DeGroot simulation.
+        """Advance until consensus or the iteration limit, recording the state after each round."""
+        if self.consensus_threshold is not None and self._has_consensus():
+            self.stop_reason = "consensus"
+            return
 
-        Opinions are updated from the current influence matrix, then influence
-        weights are updated through each agent's explicit change functions. This
-        method is useful for recreating results such as those stated in
-        Chatterjee and Seneta (1977) for open-minded agents.
-        """
-        for _ in range(self.n_iterations):
-            # # At each iteration, we can update the backward product, which is a piece of information that belongs to the Controller, not to the SocialNetwork. This is useful for analytical checks, but it is not strictly necessary for the simulation itself.
-            # self.backward_product = self.social_network.get_influence_matrix() * self.backward_product
-            # self.append_backward_product()
+        while self.completed_iterations < self.n_iterations:
+            self.social_network.advance_round()
+            self.completed_iterations += 1
+            self._record_state()
 
-            self.social_network.update_opinions()
-            self.social_network.update_influences()
-            self.social_network.update_graph()
+            if self.consensus_threshold is not None and self._has_consensus():
+                self.stop_reason = "consensus"
+                return
 
-            self.append_opinion_vector()
-            self.append_influence_matrix()
-            self.append_minimum_influence()
-            self.append_network_graph()
-
-    def run_simulation_v2(self) -> None:
-        """
-        Run the DeGroot simulation with dynamic influence weights.
-
-        Opinions are updated first. Then non-zero influence weights are
-        recomputed from the previous opinion vector and the network's
-        distribution function. This method is useful for implementing dynamic
-        influence mechanisms driven by homophily.
-        """
-        for _ in range(self.n_iterations):
-            # # At each iteration, we can update the backward product, which is a piece of information that belongs to the Controller, not to the SocialNetwork. This is useful for analytical checks, but it is not strictly necessary for the simulation itself.
-            # self.backward_product = self.social_network.get_influence_matrix() * self.backward_product
-            # self.append_backward_product()
-
-            self.social_network.update_opinions()
-            self.social_network.update_influences_v2(self.opinion_history[-1])
-            self.social_network.update_graph()
-
-            self.append_opinion_vector()
-            self.append_influence_matrix()
-            self.append_minimum_influence()
-            self.append_network_graph()
-
-    def plot_opinion_history(self, show_labels: bool = True) -> None:
-        """Plot the stored opinion history."""
-        View.plot_opinion_history(self.opinion_history, self.social_network.n_agents, show_labels=show_labels)
-
-    def plot_minimum_influence_history(self, log_scale: bool = True) -> None:
-        """Plot the smallest positive influence recorded at each iteration."""
-        View.plot_minimum_influence_history(self.minimum_influence_history, log_scale=log_scale)
-
-    def display_network_graphs_animation(self, include_self_loops: bool = False, filter_vertex: int = None) -> None:
-        """Display an interactive animation of the stored network graphs."""
-        View.display_network_graphs_animation(
-            self.network_graphs,
-            self.social_network,
-            include_self_loops=include_self_loops,
-            filter_vertex=filter_vertex,
-        )
-
-    def get_first_opinion_vector(self) -> matrix:
-        return self.opinion_history[0]
-
-    def get_last_opinion_vector(self) -> matrix:
-        return self.opinion_history[-1]
-
-    def get_opinion_history(self) -> List[matrix]:
-        return self.opinion_history
-
-    def get_first_influence_matrix(self) -> matrix:
-        return self._initial_influence_matrix
-
-    def get_last_influence_matrix(self) -> matrix:
-        return self.influence_matrix_history[-1]
-
-    def get_influence_matrix_history(self) -> List[matrix]:
-        return list(self.influence_matrix_history)
-
-    def get_minimum_influence_history(self) -> List:
-        return self.minimum_influence_history
-
-    def get_backward_product_history(self) -> List[matrix]:
-        return self.backward_product_history
-
-    def get_final_opinion_via_backward_product(self) -> matrix:
-        """
-        Compute the final opinion vector from the initial vector and backward product.
-
-        This is an analytical cross-check for the standard simulation path.
-        """
-        return self.backward_product * self.get_first_opinion_vector()
-
-    def print_current_network_graph(self, include_self_loops: bool = False) -> None:
-        """Display the last stored network graph."""
-        graph = self.network_graphs[-1]
-        position = self.social_network.get_node_positions()
-        View.display_network_graph(graph, position, include_self_loops)
-
-    def print_opinion_history(self) -> None:
-        """Print the stored opinion vector for each iteration."""
-        for i, opinion_vector in enumerate(self.opinion_history):
-            print(f"Iteration {i}:")
-            print(opinion_vector)
-
-    def print_influence_matrix_history(self) -> None:
-        """Print the stored influence matrices."""
-        for i, influence_matrix in enumerate(self.influence_matrix_history):
-            print(f"Iteration {i}:")
-            print(self._format_influence_matrix(influence_matrix))
-            print()
-
-    def print_last_influence_matrices(self, n: int = 5) -> None:
-        """Print the last n stored influence matrices."""
-        entries = list(self.influence_matrix_history)[-n:]
-        last_iter = len(self.opinion_history) - 1
-        first_shown_iter = last_iter - len(entries) + 1
-        for i, influence_matrix in enumerate(entries):
-            print(f"Iteration {first_shown_iter + i}:")
-            print(self._format_influence_matrix(influence_matrix))
-            print()
-
-    def print_minimum_influence_history(self) -> None:
-        """Print the smallest positive influence recorded at each iteration."""
-        for i, minimum_influence in enumerate(self.minimum_influence_history):
-            value = "None" if minimum_influence is None else mp.nstr(minimum_influence, 50)
-            print(f"Iteration {i}: {value}")
-
-    def print_backward_product_history(self) -> None:
-        """Print the stored backward product matrices."""
-        for i, backward_product in enumerate(self.backward_product_history):
-            print(f"Iteration {i}:")
-            print(backward_product)
+        self.stop_reason = "iteration_limit"
