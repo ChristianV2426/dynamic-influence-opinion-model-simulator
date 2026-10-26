@@ -1,0 +1,33 @@
+{
+  "mode": "custom",
+  "iterationLimit": 50,
+  "recordInfluenceHistory": true,
+  "distributionFunction": {"type": "gaussian", "gamma": 10},
+  "agents": [
+    {"name": "Agent1", "opinion": 1.0, "silenceMode": "memory", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "Agent2", "opinion": 0.9, "silenceMode": "memory", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "Agent3", "opinion": 0.1, "silenceMode": "memory", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "Agent4", "opinion": 0.0, "silenceMode": "memory", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true}
+  ],
+  "edges": [
+    {"target": "Agent1", "source": "Agent1", "influence": 0.1},
+    {"target": "Agent1", "source": "Agent2", "influence": 0.35},
+    {"target": "Agent1", "source": "Agent3", "influence": 0.4},
+    {"target": "Agent1", "source": "Agent4", "influence": 0.15},
+
+    {"target": "Agent2", "source": "Agent1", "influence": 0.15},
+    {"target": "Agent2", "source": "Agent2", "influence": 0.3},
+    {"target": "Agent2", "source": "Agent3", "influence": 0.4},
+    {"target": "Agent2", "source": "Agent4", "influence": 0.15},
+
+    {"target": "Agent3", "source": "Agent1", "influence": 0.15},
+    {"target": "Agent3", "source": "Agent2", "influence": 0.4},
+    {"target": "Agent3", "source": "Agent3", "influence": 0.3},
+    {"target": "Agent3", "source": "Agent4", "influence": 0.15},
+
+    {"target": "Agent4", "source": "Agent1", "influence": 0.15},
+    {"target": "Agent4", "source": "Agent2", "influence": 0.4},
+    {"target": "Agent4", "source": "Agent3", "influence": 0.35},
+    {"target": "Agent4", "source": "Agent4", "influence": 0.1}
+  ]
+}

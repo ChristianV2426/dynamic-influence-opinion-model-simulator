@@ -17,6 +17,10 @@ def main() -> int:
         "--plot", nargs="+", choices=("opinions", "opinions-with-silence", "private-public", "network", "minimum-influence"),
         default=["opinions"], help="Plots to display (default: opinions)",
     )
+    parser.add_argument(
+        "--agent-legend", action=argparse.BooleanOptionalAction, default=True,
+        help=f"Show the agent-name/color legend when there are at most {View.MAX_AGENT_LEGEND_ENTRIES} agents (default: on)",
+    )
     args = parser.parse_args()
 
     try:
@@ -33,16 +37,18 @@ def main() -> int:
 
         for plot in args.plot:
             if plot == "opinions":
-                View.plot_opinion_history(controller.opinion_history, names, show=False)
+                View.plot_opinion_history(
+                    controller.opinion_history, names, show_labels=args.agent_legend, show=False)
 
             elif plot == "opinions-with-silence":
                 View.plot_opinion_history_with_silence(
-                    controller.opinion_history, controller.speaking_history, names, show=False)
+                    controller.opinion_history, controller.speaking_history, names,
+                    show_labels=args.agent_legend, show=False)
 
             elif plot == "private-public":
                 View.plot_private_public_opinion_history(
                     controller.opinion_history, controller.public_opinion_history,
-                    controller.speaking_history, names, show=False)
+                    controller.speaking_history, names, show_labels=args.agent_legend, show=False)
 
             elif plot == "network":
                 history = controller.influence_matrix_history or [initial_matrix]

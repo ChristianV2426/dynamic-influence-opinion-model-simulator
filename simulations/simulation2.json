@@ -1,27 +1,12 @@
 {
-  "mode": "custom",
-  "iterationLimit": 50,
-  "recordInfluenceHistory": true,
-  "recordMinimumInfluence": true,
-  "distributionFunction": {"type": "gaussian", "gamma": 5},
-  "agents": [
-    {"name": "0", "opinion": 0.95, "dynamicInfluence": true},
-    {"name": "1", "opinion": 0.80, "dynamicInfluence": true},
-    {"name": "2", "opinion": 0.20, "dynamicInfluence": true},
-    {"name": "3", "opinion": 0.05, "dynamicInfluence": true}
-  ],
-  "edges": [
-    {"target": "0", "source": "0", "influence": 1.0},
-
-    {"target": "1", "source": "0", "influence": 0.9},
-    {"target": "1", "source": "1", "influence": 0.095},
-    {"target": "1", "source": "2", "influence": 0.005},
-
-    {"target": "2", "source": "1", "influence": 0.005},
-    {"target": "2", "source": "2", "influence": 0.095},
-    {"target": "2", "source": "3", "influence": 0.9},
-
-    {"target": "3", "source": "2", "influence": 0.01},
-    {"target": "3", "source": "3", "influence": 0.99}
+  "mode": "random",
+  "iterationLimit": 20,
+  "consensusThreshold": 0.001,
+  "nAgents": 10,
+  "neighborsPerAgent": 4,
+  "rewiringProbability": 0.25,
+  "seed": 42,
+  "allowedAgentTypes": [
+    {"silenceMode": "none", "dynamicInfluence": false}
   ]
 }

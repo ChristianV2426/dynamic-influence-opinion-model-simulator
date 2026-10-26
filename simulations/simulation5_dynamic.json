@@ -1,0 +1,36 @@
+{
+  "mode": "custom",
+  "iterationLimit": 15,
+  "recordInfluenceHistory": true,
+  "distributionFunction": {"type": "gaussian", "gamma": 10},
+  "agents": [
+    {"name": "Agent1", "opinion": 1.0, "silenceMode": "memoryless", "toleranceRadius": 0.2, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "Agent2", "opinion": 0.8, "silenceMode": "memoryless", "toleranceRadius": 0.15, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "Agent3", "opinion": 0.5, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "Agent4", "opinion": 0.2, "silenceMode": "memoryless", "toleranceRadius": 0.15, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "Agent5", "opinion": 0.0, "silenceMode": "memoryless", "toleranceRadius": 0.2, "majorityThreshold": 0.5, "dynamicInfluence": true}
+  ],
+  "edges": [
+    {"target": "Agent1", "source": "Agent1", "influence": 0.5},
+    {"target": "Agent1", "source": "Agent2", "influence": 0.4},
+    {"target": "Agent1", "source": "Agent3", "influence": 0.1},
+
+    {"target": "Agent2", "source": "Agent1", "influence": 0.4},
+    {"target": "Agent2", "source": "Agent2", "influence": 0.5},
+    {"target": "Agent2", "source": "Agent3", "influence": 0.1},
+
+    {"target": "Agent3", "source": "Agent1", "influence": 0.2},
+    {"target": "Agent3", "source": "Agent2", "influence": 0.2},
+    {"target": "Agent3", "source": "Agent3", "influence": 0.2},
+    {"target": "Agent3", "source": "Agent4", "influence": 0.2},
+    {"target": "Agent3", "source": "Agent5", "influence": 0.2},
+
+    {"target": "Agent4", "source": "Agent3", "influence": 0.1},
+    {"target": "Agent4", "source": "Agent4", "influence": 0.5},
+    {"target": "Agent4", "source": "Agent5", "influence": 0.4},
+
+    {"target": "Agent5", "source": "Agent3", "influence": 0.1},
+    {"target": "Agent5", "source": "Agent4", "influence": 0.4},
+    {"target": "Agent5", "source": "Agent5", "influence": 0.5}
+  ]
+}

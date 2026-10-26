@@ -1,0 +1,15 @@
+{
+  "mode": "random",
+  "iterationLimit": 1000,
+  "consensusThreshold": 0.001,
+  "nAgents": 10,
+  "neighborsPerAgent": 4,
+  "rewiringProbability": 0.25,
+  "seed": 42,
+  "allowedAgentTypes": [
+    {"silenceMode": "none", "dynamicInfluence": true}
+  ],
+  "distributionFunction": {"type": "gaussian", "gamma": 100},
+  "recordInfluenceHistory": true,
+  "recordMinimumInfluence": true
+}
