@@ -1,0 +1,22 @@
+{
+  "mode": "custom",
+  "iterationLimit": 10,
+  "recordInfluenceHistory": true,
+  "distributionFunction": {"type": "gaussian", "c": 10},
+  "agents": [
+    {"name": "Agent1", "opinion": 1.0, "dynamicInfluence": true},
+    {"name": "Agent2", "opinion": 0.8, "dynamicInfluence": true},
+    {"name": "Agent3", "opinion": 0.2, "dynamicInfluence": true},
+    {"name": "Agent4", "opinion": 0.0, "dynamicInfluence": true}
+  ],
+  "edges": [
+    {"source": "Agent1", "target": "Agent2", "influence": 0.25},
+    {"source": "Agent1", "target": "Agent4", "influence": 0.1},
+    {"source": "Agent2", "target": "Agent1", "influence": 0.5},
+    {"source": "Agent2", "target": "Agent3", "influence": 0.5},
+    {"source": "Agent3", "target": "Agent2", "influence": 0.75},
+    {"source": "Agent3", "target": "Agent4", "influence": 0.9},
+    {"source": "Agent4", "target": "Agent1", "influence": 0.5},
+    {"source": "Agent4", "target": "Agent3", "influence": 0.5}
+  ]
+}

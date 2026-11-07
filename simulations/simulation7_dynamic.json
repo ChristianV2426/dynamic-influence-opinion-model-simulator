@@ -3,7 +3,7 @@
   "iterationLimit": 100000,
   "consensusThreshold": 0.001,
   "recordInfluenceHistory": true,
-  "distributionFunction": {"type": "gaussian", "gamma": 30},
+  "distributionFunction": {"type": "gaussian", "c": 10},
   "agents": [
     {"name": "Agent1", "opinion": 0.0, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true},
     {"name": "Agent2", "opinion": 0.25, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true},

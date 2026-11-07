@@ -9,5 +9,5 @@
   "allowedAgentTypes": [
     {"silenceMode": "none", "dynamicInfluence": true}
   ],
-  "distributionFunction": {"type": "gaussian", "gamma": 10}
+  "distributionFunction": {"type": "gaussian", "c": 10}
 }

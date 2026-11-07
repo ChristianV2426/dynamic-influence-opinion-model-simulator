@@ -1,9 +1,9 @@
 {
   "mode": "custom",
-  "iterationLimit": 50,
+  "iterationLimit": 9000,
   "recordInfluenceHistory": true,
   "recordMinimumInfluence": true,
-  "distributionFunction": {"type": "gaussian", "gamma": 1},
+  "distributionFunction": {"type": "exponential", "c": 10},
   "agents": [
     {"name": "0", "opinion": 0.95, "dynamicInfluence": true},
     {"name": "1", "opinion": 0.80, "dynamicInfluence": true},
