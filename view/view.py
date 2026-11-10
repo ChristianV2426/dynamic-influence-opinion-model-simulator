@@ -6,7 +6,6 @@ from matplotlib.ticker import MaxNLocator
 import networkx as nx
 import numpy as np
 
-
 class View:
     """Plot recorded simulation states."""
 
@@ -15,6 +14,10 @@ class View:
     MAX_AGENT_LEGEND_ENTRIES = 20
     OPINION_Y_MARGIN = 0.025
     OPINION_X_MARGIN = 0.01
+    AXIS_LABEL_FONT_SIZE = 16
+    TICK_LABEL_FONT_SIZE = 16
+    LEGEND_FONT_SIZE = 14
+    LEGEND_TITLE_FONT_SIZE = 16
 
     @staticmethod
     def _opinion_matrix(history: Sequence[np.ndarray]) -> np.ndarray:
@@ -46,6 +49,14 @@ class View:
         return plt.get_cmap(palette)
 
     @staticmethod
+    def _configure_time_axis(ax, last_time: int) -> None:
+        """Use five equal time intervals when the final time is divisible by five."""
+        if last_time > 0 and last_time % 5 == 0:
+            ax.set_xticks(np.linspace(0, last_time, 6, dtype=int))
+        else:
+            ax.xaxis.set_major_locator(MaxNLocator(nbins=5, integer=True))
+
+    @staticmethod
     def plot_opinion_history(
         opinion_history: Sequence[np.ndarray],
         agent_names: Optional[Sequence[str]] = None,
@@ -63,18 +74,20 @@ class View:
             ax.plot(rounds, opinions[:, index], color=colors(
                 index % colors.N), label=name)
 
-        ax.set(xlabel="Round", ylabel="Opinion",
-               title="Opinion evolution", ylim=(-View.OPINION_Y_MARGIN, 1 + View.OPINION_Y_MARGIN))
+        ax.set_ylim(-View.OPINION_Y_MARGIN, 1 + View.OPINION_Y_MARGIN)
+        ax.set_xlabel("Time", fontweight="bold", fontsize=View.AXIS_LABEL_FONT_SIZE)
+        ax.set_ylabel("Opinion", fontweight="bold", fontsize=View.AXIS_LABEL_FONT_SIZE)
+        ax.tick_params(axis="both", labelsize=View.TICK_LABEL_FONT_SIZE)
         ax.set_yticks(np.linspace(0, 1, 11))
         last_round = max(1, len(rounds) - 1)
         margin = View.OPINION_X_MARGIN * last_round
         ax.set_xlim(-margin, last_round + margin)
-        ax.xaxis.set_major_locator(MaxNLocator(nbins=10, integer=True))
-        ax.grid(True)
+        View._configure_time_axis(ax, last_round)
         if show_labels and len(names) <= View.MAX_AGENT_LEGEND_ENTRIES:
             fig.set_size_inches(9.4, 6)
             ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1),
-                      ncol=1, fontsize="small")
+                      ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Agents",
+                      title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE})
             fig.tight_layout()
 
         if show:
@@ -98,7 +111,6 @@ class View:
         names = View._agent_names(agent_names, opinions.shape[1])
         fig = View.plot_opinion_history(opinion_history, names, show_labels=False, show=False)
         ax = fig.axes[0]
-        ax.set_title("Opinion evolution and silence status")
         rounds = np.arange(opinions.shape[0])
         colors = View._opinion_colors(len(names))
 
@@ -114,16 +126,28 @@ class View:
                 ax.scatter(rounds[silent], opinions[silent, index],
                            marker="s", color=color, edgecolors="black", zorder=3)
 
-        handles = ([Line2D([0], [0], color=colors(index % colors.N), label=name)
-                    for index, name in enumerate(names)]
-                   if show_labels and len(names) <= View.MAX_AGENT_LEGEND_ENTRIES else [])
-        handles.extend([
+        agent_handles = ([Line2D([0], [0], color=colors(index % colors.N), label=name)
+                          for index, name in enumerate(names)]
+                         if show_labels and len(names) <= View.MAX_AGENT_LEGEND_ENTRIES else [])
+        status_handles = [
             Line2D([0], [0], color="black", marker="o", linestyle="None", label="Non-silent"),
             Line2D([0], [0], color="black", marker="s", linestyle="None", label="Silent"),
-        ])
+        ]
         fig.set_size_inches(9.4, 6)
-        ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.02, 1),
-                  ncol=1, fontsize="small")
+        if agent_handles:
+            agent_legend = ax.legend(
+                handles=agent_handles, loc="upper left", bbox_to_anchor=(1.02, 1),
+                ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Agents",
+                title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE},
+            )
+            ax.add_artist(agent_legend)
+
+        status_y = max(0.05, 1 - 0.045 * (len(agent_handles) + 1))
+        ax.legend(
+            handles=status_handles, loc="upper left", bbox_to_anchor=(1.02, status_y),
+            ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Silent status",
+            title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE},
+        )
         fig.tight_layout()
 
         if show:
@@ -174,25 +198,47 @@ class View:
                     edgecolors="black", zorder=3,
                 )
 
-        ax.set(xlabel="Round", ylabel="Opinion",
-               title="Opinions and public opinions", ylim=(-View.OPINION_Y_MARGIN, 1 + View.OPINION_Y_MARGIN))
+        ax.set(ylim=(-View.OPINION_Y_MARGIN, 1 + View.OPINION_Y_MARGIN))
+        ax.set_xlabel("Time", fontweight="bold", fontsize=View.AXIS_LABEL_FONT_SIZE)
+        ax.set_ylabel("Opinion", fontweight="bold", fontsize=View.AXIS_LABEL_FONT_SIZE)
+        ax.tick_params(axis="both", labelsize=View.TICK_LABEL_FONT_SIZE)
         ax.set_yticks(np.linspace(0, 1, 11))
         last_round = max(1, len(rounds) - 1)
         margin = View.OPINION_X_MARGIN * last_round
         ax.set_xlim(-margin, last_round + margin)
-        ax.xaxis.set_major_locator(MaxNLocator(nbins=10, integer=True))
-        ax.grid(True)
-        handles = ([Line2D([0], [0], color=colors(index % colors.N), label=name)
-                    for index, name in enumerate(names)]
-                   if show_labels and len(names) <= View.MAX_AGENT_LEGEND_ENTRIES else [])
-        handles.extend([
+        View._configure_time_axis(ax, last_round)
+        agent_handles = ([Line2D([0], [0], color=colors(index % colors.N), label=name)
+                          for index, name in enumerate(names)]
+                         if show_labels and len(names) <= View.MAX_AGENT_LEGEND_ENTRIES else [])
+        plot_handles = [
             Line2D([0], [0], color="black", linestyle="-", label="Opinion"),
             Line2D([0], [0], color="black", linestyle="--", label="Public opinion"),
+        ]
+        status_handles = [
             Line2D([0], [0], color="black", marker="o", linestyle="None", label="Non-silent"),
             Line2D([0], [0], color="black", marker="s", linestyle="None", label="Silent"),
-        ])
-        ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.02, 1),
-                  ncol=1, fontsize="small")
+        ]
+        if agent_handles:
+            agent_legend = ax.legend(
+                handles=agent_handles, loc="upper left", bbox_to_anchor=(1.02, 1),
+                ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Agents",
+                title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE},
+            )
+            ax.add_artist(agent_legend)
+
+        status_y = max(0.05, 1 - 0.045 * (len(agent_handles) + 1))
+        status_legend = ax.legend(
+            handles=status_handles, loc="upper left", bbox_to_anchor=(1.02, status_y),
+            ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Silent status",
+            title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE},
+        )
+        ax.add_artist(status_legend)
+        plot_y = max(0.05, status_y - 0.16)
+        ax.legend(
+            handles=plot_handles, loc="upper left", bbox_to_anchor=(1.02, plot_y),
+            ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Plot",
+            title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE},
+        )
         fig.tight_layout()
 
         if show:
@@ -218,14 +264,15 @@ class View:
         fig, ax = plt.subplots()
         ax.plot(np.arange(values.size), np.log(
             values) if use_natural_log else values)
-        ax.set(
-            xlabel="Round",
-            ylabel="ln(Minimum positive influence)" if use_natural_log else "Minimum positive influence",
-            title="Minimum influence evolution",
+        ax.set_xlabel("Time", fontweight="bold", fontsize=View.AXIS_LABEL_FONT_SIZE)
+        ax.set_ylabel(
+            "ln(Minimum influence)" if use_natural_log else "Minimum influence",
+            fontweight="bold",
+            fontsize=View.AXIS_LABEL_FONT_SIZE,
         )
+        ax.tick_params(axis="both", labelsize=View.TICK_LABEL_FONT_SIZE)
         ax.set_xlim(0, max(1, values.size - 1))
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.grid(True)
+        View._configure_time_axis(ax, max(1, values.size - 1))
 
         if show:
             plt.show()
@@ -297,7 +344,6 @@ class View:
                     connectionstyle=connection_style, ax=ax,
                 )
 
-            ax.set_title(f"Influence network - round {index}")
             ax.set_axis_on()
             ax.set_xticks([])
             ax.set_yticks([])
