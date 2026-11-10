@@ -9,7 +9,7 @@
   "allowedAgentTypes": [
     {"silenceMode": "none", "dynamicInfluence": true}
   ],
-  "distributionFunction": {"type": "gaussian", "gamma": 100},
+  "distributionFunction": {"type": "gaussian", "c": 100},
   "recordInfluenceHistory": true,
   "recordMinimumInfluence": true
 }

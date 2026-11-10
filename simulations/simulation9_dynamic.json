@@ -2,7 +2,7 @@
   "mode": "custom",
   "iterationLimit": 10,
   "recordInfluenceHistory": true,
-  "distributionFunction": {"type": "gaussian", "gamma": 10},
+  "distributionFunction": {"type": "gaussian", "c": 10},
   "agents": [
     {"name": "Agent1", "opinion": 1.0, "silenceMode": "memory", "toleranceRadius": 0.2, "majorityThreshold": 0.5, "dynamicInfluence": true},
     {"name": "Agent2", "opinion": 0.9, "silenceMode": "memory", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true},

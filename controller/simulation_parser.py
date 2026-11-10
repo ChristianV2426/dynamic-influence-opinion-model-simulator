@@ -8,27 +8,75 @@ from model.agent import Agent
 from model.social_network import SocialNetwork
 
 
-def _gaussian_distribution(data: dict[str, Any]) -> Callable[[float], float]:
-    """Build f(d) = exp(-gamma * d²) from its JSON parameters."""
-    SimulationParser._fields(data, {"type", "gamma"}, "distributionFunction")
-    gamma = SimulationParser._number(
-        SimulationParser._required(data, "gamma", "distributionFunction"),
-        "distributionFunction.gamma",
+DISTRIBUTION_TYPE_EXPONENTIAL = "exponential"
+DISTRIBUTION_TYPE_GAUSSIAN = "gaussian"
+DISTRIBUTION_TYPE_RECIPROCAL_LINEAR = "reciprocal-linear"
+DISTRIBUTION_TYPE_RECIPROCAL_QUADRATIC = "reciprocal-quadratic"
+DISTRIBUTION_PARAMETER_C = "c"
+DISTRIBUTION_FUNCTION_FIELDS = {"type", DISTRIBUTION_PARAMETER_C}
+
+
+def _positive_distribution_parameter(data: dict[str, Any]) -> float:
+    """Read the positive shape parameter shared by every distribution function."""
+    SimulationParser._fields(data, DISTRIBUTION_FUNCTION_FIELDS, "distributionFunction")
+    c = SimulationParser._number(
+        SimulationParser._required(data, DISTRIBUTION_PARAMETER_C, "distributionFunction"),
+        f"distributionFunction.{DISTRIBUTION_PARAMETER_C}",
     )
-    if gamma <= 0:
-        raise ValueError("distributionFunction.gamma must be positive")
+    if c <= 0:
+        raise ValueError(f"distributionFunction.{DISTRIBUTION_PARAMETER_C} must be positive")
+    return c
+
+
+def _exponential_distribution(data: dict[str, Any]) -> Callable[[float], float]:
+    """Build f(d) = exp(-c * d) from its JSON parameters."""
+    c = _positive_distribution_parameter(data)
+
+    def exponential(distance: float) -> float:
+        return math.exp(-c * distance)
+
+    return exponential
+
+
+def _gaussian_distribution(data: dict[str, Any]) -> Callable[[float], float]:
+    """Build f(d) = exp(-c * d²) from its JSON parameters."""
+    c = _positive_distribution_parameter(data)
 
     def gaussian(distance: float) -> float:
-        return math.exp(-gamma * distance ** 2)
+        return math.exp(-c * distance ** 2)
 
     return gaussian
+
+
+def _reciprocal_linear_distribution(data: dict[str, Any]) -> Callable[[float], float]:
+    """Build f(d) = 1 / (1 + c * d) from its JSON parameters."""
+    c = _positive_distribution_parameter(data)
+
+    def reciprocal_linear(distance: float) -> float:
+        return 1 / (1 + c * distance)
+
+    return reciprocal_linear
+
+
+def _reciprocal_quadratic_distribution(data: dict[str, Any]) -> Callable[[float], float]:
+    """Build f(d) = 1 / (1 + c * d²) from its JSON parameters."""
+    c = _positive_distribution_parameter(data)
+
+    def reciprocal_quadratic(distance: float) -> float:
+        return 1 / (1 + c * distance ** 2)
+
+    return reciprocal_quadratic
 
 
 class SimulationParser:
     """Build a simulation from a JSON configuration."""
 
-    # Add new JSON distribution types here, each with a parameter-validating builder.
-    DISTRIBUTION_FUNCTIONS = {"gaussian": _gaussian_distribution}
+    DISTRIBUTION_FUNCTIONS = {
+        DISTRIBUTION_TYPE_EXPONENTIAL: _exponential_distribution,
+        DISTRIBUTION_TYPE_GAUSSIAN: _gaussian_distribution,
+        DISTRIBUTION_TYPE_RECIPROCAL_LINEAR: _reciprocal_linear_distribution,
+        DISTRIBUTION_TYPE_RECIPROCAL_QUADRATIC: _reciprocal_quadratic_distribution,
+    }
 
     COMMON_FIELDS = {"mode", "iterationLimit", "consensusThreshold", "recordInfluenceHistory",
                      "recordMinimumInfluence", "distributionFunction",}
