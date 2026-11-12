@@ -147,13 +147,13 @@ $$
 The public opinion of agent $j$ at time $t$ is:
 
 $$
-\operatorname{pub}B_j^t = B_j^{\bar{t}_j}.
+\mathrm{pub}B_j^t = B_j^{\bar{t}_j}.
 $$
 
 Unlike SOM$^-$, this public opinion remains available while the agent is silent. The opinion update is therefore:
 
 $$
-B_i^{t+1} = B_i^t + \sum_{j \in N_i} I_{ji}\left(\operatorname{pub}B_j^t - B_i^t\right).
+B_i^{t+1} = B_i^t + \sum_{j \in N_i} I_{ji}\left(\mathrm{pub}B_j^t - B_i^t\right).
 $$
 
 The silence update evaluates the public opinions of every neighbor in $N_i$:
@@ -162,7 +162,7 @@ $$
 S_i^{t+1} =
 \begin{cases}
 1, & \text{if } \mathcal{M}_i |N_i|
-\leq \left|\{j \in N_i \mid B_i^t \sim_{\tau_i} \operatorname{pub}B_j^t\}\right|, \\
+\leq \left|\{j \in N_i \mid B_i^t \sim_{\tau_i} \mathrm{pub}B_j^t\}\right|, \\
 0, & \text{otherwise.}
 \end{cases}
 $$
@@ -255,7 +255,7 @@ At each round, the current weights of the speaking neighbors, together with self
 The memory-based version uses the public opinions criterion defined for SOM$^+$. Its opinion update is:
 
 $$
-B_i^{t+1}=B_i^t+\sum_{j\in N_i}I_{ji}^t\left(\operatorname{pub}B_j^t-B_i^t\right).
+B_i^{t+1}=B_i^t+\sum_{j\in N_i}I_{ji}^t\left(\mathrm{pub}B_j^t-B_i^t\right).
 $$
 
 The speaking state follows the same social-support rule used in SOM$^+$. The influence redistribution compares the receiving agent's internal opinion with the public opinions available in the network. For every $j\in N_i\cup\{i\mid i\in H\}$, define:
@@ -264,7 +264,7 @@ $$
 \Delta_{ji}^{t,\mathrm{pub}}=
 \begin{cases}
 0, & j=i,\\
-\left|\operatorname{pub}B_j^t-B_i^t\right|, & j\in N_i.
+\left|\mathrm{pub}B_j^t-B_i^t\right|, & j\in N_i.
 \end{cases}
 $$
 
