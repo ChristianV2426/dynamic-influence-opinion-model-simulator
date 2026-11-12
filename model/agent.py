@@ -11,7 +11,7 @@ class Agent:
     - influence_of_others: One weight per network agent; entry j is how much agent j influences this agent, including self-influence at entry index. Weights must be non-negative and are normalized to sum to one; an all-zero row becomes full self-influence.
     - name: Optional label; defaults to the string form of index.
     - dynamic_influence: Whether the network may update this agent's influence row between rounds; the update rule belongs to the network, not this class.
-    - silence_mode: "none" keeps the agent speaking; "memoryless" lets it stop contributing to opinion updates while its public opinion still follows its internal opinion; "memory" keeps its last public opinion available while it is silent.
+    - silence_mode: "none" keeps the agent speaking; "memoryless" lets it stop contributing to opinion updates while its public opinion still follows its internal opinion; "memory" keeps the agent's last publicly expressed opinion available to other agents while it is silent.
     - tolerance_radius: Maximum opinion distance for a neighbor to count as close, in [0, 1]; required for either silence mode.
     - majority_threshold: Minimum fraction of considered neighbors that must be close for the agent to speak, in [0, 1]; required for either silence mode.
     """
@@ -149,7 +149,7 @@ class Agent:
         Return the factor used for this agent in the opinion update.
         - A DeGroot agent always contributes its current opinion.
         - A memoryless agent contributes its current opinion only while speaking.
-        - A memory agent always contributes its last public opinion (while it is speaking, the last public opinion is the current opinion).
+        - A memory-mode agent is represented by its last public opinion (while it is speaking, that public opinion is the current opinion).
         """
         return int(self.silence_mode != "memoryless" or self._speaking)
 
@@ -181,8 +181,8 @@ class Agent:
 
         The network supplies this agent's neighbors, excluding itself, with each
         neighbor's public opinion and opinion_participation. A silent memoryless
-        neighbor is excluded; a silent memory neighbor remains represented by
-        its last public opinion. With no considered neighbors, the paper's
+        neighbor is excluded; for a silent memory-mode neighbor, its last
+        publicly expressed opinion remains available. With no considered neighbors, the paper's
         majority inequality is satisfied (0 >= 0).
         """
         if self.silence_mode == "none":
@@ -212,7 +212,7 @@ class Agent:
         Commit this agent's next opinion and speaking state together.
 
         DeGroot and memoryless agents expose their current opinion every round.
-        A memory agent retains its last public opinion while it is silent.
+        A silent memory-mode agent's last publicly expressed opinion remains available to the network.
         """
         opinion = self._unit_interval(new_opinion, "new_opinion")
 

@@ -187,11 +187,11 @@ class SocialNetwork:
     @property
     def opinion_participation_vector(self) -> np.ndarray:
         """
-        Return a vector of 1s and 0s indicating which agents' public opinions contribute to others' opinion updates; a silent memory agent still contributes with its last public opinion.
+        Return a vector of 1s and 0s indicating which agents' public opinions contribute to others' opinion updates; the last opinion expressed by a silent memory-mode agent remains available.
 
         - A DeGroot agent always contributes its current opinion.
         - A memoryless agent contributes its current opinion only while speaking.
-        - A memory agent always contributes its last public opinion (while it is speaking, the last public opinion is the current opinion).
+        - A memory-mode agent is represented by its last public opinion (while it is speaking, that public opinion is the current opinion).
         """
         return np.array([agent.opinion_participation for agent in self.agents], dtype=np.float64)
 
@@ -202,7 +202,7 @@ class SocialNetwork:
         
         - A DeGroot agent is always speaking.
         - A memoryless agent is speaking only while it is contributing its current opinion (its opinion_participation and speaking states are the same at all times).
-        - A memory agent can be speaking or silent, but it always contributes its last public opinion to others' opinion updates (its opinion_participation is always 1).
+        - A memory-mode agent can be speaking or silent, but its last publicly expressed opinion remains available to others' opinion updates (its opinion_participation is always 1).
         """
         return np.array([agent.speaking for agent in self.agents], dtype=np.bool_)
 
