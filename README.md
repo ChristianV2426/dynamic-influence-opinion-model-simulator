@@ -234,15 +234,15 @@ $$
 
 The speaking state is determined by the same social-support criterion used in SOM$^-$. The influence update uses the speaking neighborhood $N_i^t$, the opinion difference $\Delta_{ji}^t$, and the self-influence set $H$, all defined above.
 
-For every source $j\in N_i\cup\{i\mid i\in H\}$, the next influence weight is:
+For every source $j\in N_i\cup\lbrace i\mid i\in H\rbrace$, the next influence weight is:
 
 $$
 I_{ji}^{t+1}=
 \begin{cases}
-\left(\displaystyle\sum_{k\in N_i^t\cup\{i\mid i\in H\}}I_{ki}^t\right)
+\left(\displaystyle\sum_{k\in N_i^t\cup\lbrace i\mid i\in H\rbrace}I_{ki}^t\right)
 \dfrac{f\left(\Delta_{ji}^t\right)}
-{\displaystyle\sum_{k\in N_i^t\cup\{i\mid i\in H\}}f\left(\Delta_{ki}^t\right)},
-& \text{if } j\in N_i^t\cup\{i\mid i\in H\},\\[12pt]
+{\displaystyle\sum_{k\in N_i^t\cup\lbrace i\mid i\in H\rbrace}f\left(\Delta_{ki}^t\right)},
+& \text{if } j\in N_i^t\cup\lbrace i\mid i\in H\rbrace,\\
 I_{ji}^t,
 & \text{if } j\in N_i\setminus N_i^t.
 \end{cases}
