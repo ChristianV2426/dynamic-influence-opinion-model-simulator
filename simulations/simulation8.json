@@ -2,30 +2,30 @@
   "mode": "custom",
   "iterationLimit": 15,
   "agents": [
-    {"name": "Agent1", "opinion": 1.0, "silenceMode": "memory", "toleranceRadius": 0.1, "majorityThreshold": 0.5},
-    {"name": "Agent2", "opinion": 0.9, "silenceMode": "memory", "toleranceRadius": 0.1, "majorityThreshold": 0.5},
-    {"name": "Agent3", "opinion": 0.1, "silenceMode": "memory", "toleranceRadius": 0.1, "majorityThreshold": 0.5},
-    {"name": "Agent4", "opinion": 0.0, "silenceMode": "memory", "toleranceRadius": 0.1, "majorityThreshold": 0.5}
+    {"name": "0", "opinion": 1.0, "silenceMode": "memory", "toleranceRadius": 0.15, "majorityThreshold": 0.5},
+    {"name": "1", "opinion": 0.9, "silenceMode": "memory", "toleranceRadius": 0.15, "majorityThreshold": 0.5},
+    {"name": "2", "opinion": 0.1, "silenceMode": "memory", "toleranceRadius": 0.15, "majorityThreshold": 0.5},
+    {"name": "3", "opinion": 0.0, "silenceMode": "memory", "toleranceRadius": 0.15, "majorityThreshold": 0.5}
   ],
   "edges": [
-    {"target": "Agent1", "source": "Agent1", "influence": 0.1},
-    {"target": "Agent1", "source": "Agent2", "influence": 0.35},
-    {"target": "Agent1", "source": "Agent3", "influence": 0.4},
-    {"target": "Agent1", "source": "Agent4", "influence": 0.15},
+    {"target": "0", "source": "0", "influence": 0.1},
+    {"target": "0", "source": "1", "influence": 0.35},
+    {"target": "0", "source": "2", "influence": 0.4},
+    {"target": "0", "source": "3", "influence": 0.15},
 
-    {"target": "Agent2", "source": "Agent1", "influence": 0.15},
-    {"target": "Agent2", "source": "Agent2", "influence": 0.3},
-    {"target": "Agent2", "source": "Agent3", "influence": 0.4},
-    {"target": "Agent2", "source": "Agent4", "influence": 0.15},
+    {"target": "1", "source": "0", "influence": 0.15},
+    {"target": "1", "source": "1", "influence": 0.3},
+    {"target": "1", "source": "2", "influence": 0.4},
+    {"target": "1", "source": "3", "influence": 0.15},
 
-    {"target": "Agent3", "source": "Agent1", "influence": 0.15},
-    {"target": "Agent3", "source": "Agent2", "influence": 0.4},
-    {"target": "Agent3", "source": "Agent3", "influence": 0.3},
-    {"target": "Agent3", "source": "Agent4", "influence": 0.15},
+    {"target": "2", "source": "0", "influence": 0.15},
+    {"target": "2", "source": "1", "influence": 0.4},
+    {"target": "2", "source": "2", "influence": 0.3},
+    {"target": "2", "source": "3", "influence": 0.15},
 
-    {"target": "Agent4", "source": "Agent1", "influence": 0.15},
-    {"target": "Agent4", "source": "Agent2", "influence": 0.4},
-    {"target": "Agent4", "source": "Agent3", "influence": 0.35},
-    {"target": "Agent4", "source": "Agent4", "influence": 0.1}
+    {"target": "3", "source": "0", "influence": 0.15},
+    {"target": "3", "source": "1", "influence": 0.4},
+    {"target": "3", "source": "2", "influence": 0.35},
+    {"target": "3", "source": "3", "influence": 0.1}
   ]
 }

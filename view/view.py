@@ -18,6 +18,8 @@ class View:
     TICK_LABEL_FONT_SIZE = 16
     LEGEND_FONT_SIZE = 14
     LEGEND_TITLE_FONT_SIZE = 16
+    FIGURE_SIZE = (9.4, 6)
+    TOLERANCE_BAND_ALPHA = 0.18
 
     @staticmethod
     def _opinion_matrix(history: Sequence[np.ndarray]) -> np.ndarray:
@@ -49,12 +51,99 @@ class View:
         return plt.get_cmap(palette)
 
     @staticmethod
+    def _tolerance_radii(
+        tolerance_radii: Optional[Sequence[Optional[float]]],
+        n_agents: int,
+    ) -> Sequence[Optional[float]]:
+        """Validate one optional tolerance radius per agent."""
+        if tolerance_radii is None:
+            return [None] * n_agents
+
+        if len(tolerance_radii) != n_agents:
+            raise ValueError("tolerance_radii must contain one value per agent")
+
+        radii = []
+        for radius in tolerance_radii:
+            if radius is None:
+                radii.append(None)
+                continue
+
+            if isinstance(radius, (bool, np.bool_)):
+                raise ValueError("tolerance radii must be numbers in [0, 1] or None")
+
+            try:
+                value = float(radius)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise ValueError("tolerance radii must be numbers in [0, 1] or None") from exc
+
+            if not np.isfinite(value) or not 0 <= value <= 1:
+                raise ValueError("tolerance radii must be numbers in [0, 1] or None")
+
+            radii.append(value)
+
+        return radii
+
+    @staticmethod
+    def _plot_tolerance_bands(
+        ax,
+        rounds: np.ndarray,
+        opinions: np.ndarray,
+        tolerance_radii: Sequence[Optional[float]],
+        colors,
+    ) -> None:
+        """Shade the tolerance interval around each agent's internal opinion."""
+        for index, radius in enumerate(tolerance_radii):
+            if radius is None or radius == 0:
+                continue
+
+            color = colors(index % colors.N)
+            ax.fill_between(
+                rounds,
+                np.clip(opinions[:, index] - radius, 0, 1),
+                np.clip(opinions[:, index] + radius, 0, 1),
+                color=color,
+                alpha=View.TOLERANCE_BAND_ALPHA,
+                linewidth=0,
+                zorder=0,
+            )
+
+    @staticmethod
     def _configure_time_axis(ax, last_time: int) -> None:
         """Use five equal time intervals when the final time is divisible by five."""
         if last_time > 0 and last_time % 5 == 0:
             ax.set_xticks(np.linspace(0, last_time, 6, dtype=int))
         else:
             ax.xaxis.set_major_locator(MaxNLocator(nbins=5, integer=True))
+
+    @staticmethod
+    def _add_side_legends(fig, sections) -> None:
+        """Place titled legend sections consecutively in the right-side margin."""
+        fig.subplots_adjust(right=0.72)
+        x_position = 0.75
+        y_position = 0.93
+
+        for title, handles in sections:
+            if not handles:
+                continue
+
+            legend = fig.legend(
+                handles=handles,
+                loc="upper left",
+                bbox_to_anchor=(x_position, y_position),
+                bbox_transform=fig.transFigure,
+                ncol=1,
+                fontsize=View.LEGEND_FONT_SIZE,
+                title=title,
+                title_fontproperties={
+                    "weight": "bold",
+                    "size": View.LEGEND_TITLE_FONT_SIZE,
+                },
+            )
+            fig.canvas.draw()
+            bounds = legend.get_window_extent(fig.canvas.get_renderer())
+            y_position = fig.transFigure.inverted().transform(
+                (bounds.x0, bounds.y0)
+            )[1] - 0.02
 
     @staticmethod
     def plot_opinion_history(
@@ -69,7 +158,7 @@ class View:
         rounds = np.arange(opinions.shape[0])
         colors = View._opinion_colors(len(names))
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=View.FIGURE_SIZE)
         for index, name in enumerate(names):
             ax.plot(rounds, opinions[:, index], color=colors(
                 index % colors.N), label=name)
@@ -84,7 +173,6 @@ class View:
         ax.set_xlim(-margin, last_round + margin)
         View._configure_time_axis(ax, last_round)
         if show_labels and len(names) <= View.MAX_AGENT_LEGEND_ENTRIES:
-            fig.set_size_inches(9.4, 6)
             ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1),
                       ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Agents",
                       title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE})
@@ -101,18 +189,27 @@ class View:
         agent_names: Optional[Sequence[str]] = None,
         show_labels: bool = True,
         show: bool = True,
+        tolerance_radii: Optional[Sequence[Optional[float]]] = None,
+        show_tolerance_bands: bool = False,
     ):
-        """Plot opinions with circles when agents speak and squares when they are silent."""
+        """Plot opinions with silence markers and, optionally, tolerance bands."""
         opinions = View._opinion_matrix(opinion_history)
         speaking = np.stack(speaking_history)
         if speaking.shape != opinions.shape:
             raise ValueError("speaking history must match opinion history")
 
+        if not isinstance(show_tolerance_bands, (bool, np.bool_)):
+            raise ValueError("show_tolerance_bands must be a boolean")
+
         names = View._agent_names(agent_names, opinions.shape[1])
+        radii = View._tolerance_radii(tolerance_radii, len(names))
         fig = View.plot_opinion_history(opinion_history, names, show_labels=False, show=False)
         ax = fig.axes[0]
         rounds = np.arange(opinions.shape[0])
         colors = View._opinion_colors(len(names))
+
+        if show_tolerance_bands:
+            View._plot_tolerance_bands(ax, rounds, opinions, radii, colors)
 
         for index in range(len(names)):
             color = colors(index % colors.N)
@@ -133,22 +230,10 @@ class View:
             Line2D([0], [0], color="black", marker="o", linestyle="None", label="Non-silent"),
             Line2D([0], [0], color="black", marker="s", linestyle="None", label="Silent"),
         ]
-        fig.set_size_inches(9.4, 6)
-        if agent_handles:
-            agent_legend = ax.legend(
-                handles=agent_handles, loc="upper left", bbox_to_anchor=(1.02, 1),
-                ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Agents",
-                title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE},
-            )
-            ax.add_artist(agent_legend)
-
-        status_y = max(0.05, 1 - 0.045 * (len(agent_handles) + 1))
-        ax.legend(
-            handles=status_handles, loc="upper left", bbox_to_anchor=(1.02, status_y),
-            ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Silent status",
-            title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE},
+        View._add_side_legends(
+            fig,
+            [("Agents", agent_handles), ("Silent status", status_handles)],
         )
-        fig.tight_layout()
 
         if show:
             plt.show()
@@ -162,8 +247,10 @@ class View:
         agent_names: Optional[Sequence[str]] = None,
         show_labels: bool = True,
         show: bool = True,
+        tolerance_radii: Optional[Sequence[Optional[float]]] = None,
+        show_tolerance_bands: bool = False,
     ):
-        """Plot opinions and public opinions, marking speaking and silence on the opinion curve only."""
+        """Plot opinions and public opinions and, optionally, tolerance bands."""
         opinions = View._opinion_matrix(opinion_history)
         public_opinions = View._opinion_matrix(public_opinion_history)
         speaking = np.stack(speaking_history)
@@ -172,11 +259,18 @@ class View:
             raise ValueError(
                 "opinion, public opinion, and speaking histories must have matching shapes")
 
+        if not isinstance(show_tolerance_bands, (bool, np.bool_)):
+            raise ValueError("show_tolerance_bands must be a boolean")
+
         names = View._agent_names(agent_names, opinions.shape[1])
+        radii = View._tolerance_radii(tolerance_radii, len(names))
         rounds = np.arange(opinions.shape[0])
         colors = View._opinion_colors(len(names))
 
-        fig, ax = plt.subplots(figsize=(9, 5))
+        fig, ax = plt.subplots(figsize=View.FIGURE_SIZE)
+        if show_tolerance_bands:
+            View._plot_tolerance_bands(ax, rounds, opinions, radii, colors)
+
         for index in range(len(names)):
             color = colors(index % colors.N)
             ax.plot(rounds, public_opinions[:, index],
@@ -218,28 +312,14 @@ class View:
             Line2D([0], [0], color="black", marker="o", linestyle="None", label="Non-silent"),
             Line2D([0], [0], color="black", marker="s", linestyle="None", label="Silent"),
         ]
-        if agent_handles:
-            agent_legend = ax.legend(
-                handles=agent_handles, loc="upper left", bbox_to_anchor=(1.02, 1),
-                ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Agents",
-                title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE},
-            )
-            ax.add_artist(agent_legend)
-
-        status_y = max(0.05, 1 - 0.045 * (len(agent_handles) + 1))
-        status_legend = ax.legend(
-            handles=status_handles, loc="upper left", bbox_to_anchor=(1.02, status_y),
-            ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Silent status",
-            title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE},
+        View._add_side_legends(
+            fig,
+            [
+                ("Agents", agent_handles),
+                ("Silent status", status_handles),
+                ("Plot", plot_handles),
+            ],
         )
-        ax.add_artist(status_legend)
-        plot_y = max(0.05, status_y - 0.16)
-        ax.legend(
-            handles=plot_handles, loc="upper left", bbox_to_anchor=(1.02, plot_y),
-            ncol=1, fontsize=View.LEGEND_FONT_SIZE, title="Plot",
-            title_fontproperties={"weight": "bold", "size": View.LEGEND_TITLE_FONT_SIZE},
-        )
-        fig.tight_layout()
 
         if show:
             plt.show()
@@ -248,10 +328,9 @@ class View:
     @staticmethod
     def plot_minimum_influence_history(
         minimum_influence_history: Sequence[float],
-        use_natural_log: bool = True,
         show: bool = True,
     ):
-        """Plot the minimum positive influence by round, using its natural logarithm by default."""
+        """Plot the base-10 logarithm of the minimum positive influence by time."""
         if not minimum_influence_history:
             raise ValueError(
                 "minimum influence history is empty; enable record_minimum_influence before running")
@@ -261,18 +340,19 @@ class View:
             raise ValueError(
                 "minimum influence history must contain finite, positive values")
 
-        fig, ax = plt.subplots()
-        ax.plot(np.arange(values.size), np.log(
-            values) if use_natural_log else values)
+        fig, ax = plt.subplots(figsize=View.FIGURE_SIZE)
+        ax.plot(np.arange(values.size), np.log10(values))
         ax.set_xlabel("Time", fontweight="bold", fontsize=View.AXIS_LABEL_FONT_SIZE)
         ax.set_ylabel(
-            "ln(Minimum influence)" if use_natural_log else "Minimum influence",
+            "log₁₀(Minimum influence)",
             fontweight="bold",
             fontsize=View.AXIS_LABEL_FONT_SIZE,
         )
         ax.tick_params(axis="both", labelsize=View.TICK_LABEL_FONT_SIZE)
-        ax.set_xlim(0, max(1, values.size - 1))
-        View._configure_time_axis(ax, max(1, values.size - 1))
+        last_time = max(1, values.size - 1)
+        margin = View.OPINION_X_MARGIN * last_time
+        ax.set_xlim(-margin, last_time + margin)
+        View._configure_time_axis(ax, last_time)
 
         if show:
             plt.show()
@@ -304,7 +384,7 @@ class View:
         initial_graph = nx.from_numpy_array(
             initial_matrix.T, create_using=nx.DiGraph)
         positions = nx.spring_layout(initial_graph, seed=42, weight=None)
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=View.FIGURE_SIZE)
         current_round = [0]
 
         def draw_round(index: int) -> None:
@@ -344,6 +424,7 @@ class View:
                     connectionstyle=connection_style, ax=ax,
                 )
 
+            ax.set_title(f"Iteration {index}", fontsize=View.AXIS_LABEL_FONT_SIZE)
             ax.set_axis_on()
             ax.set_xticks([])
             ax.set_yticks([])
