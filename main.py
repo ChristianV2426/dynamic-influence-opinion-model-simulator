@@ -21,6 +21,10 @@ def main() -> int:
         "--agent-legend", action=argparse.BooleanOptionalAction, default=True,
         help=f"Show the agent-name/color legend when there are at most {View.MAX_AGENT_LEGEND_ENTRIES} agents (default: on)",
     )
+    parser.add_argument(
+        "--tolerance-bands", action=argparse.BooleanOptionalAction, default=False,
+        help="Show tolerance-radius bands on silence-related opinion plots (default: off)",
+    )
     args = parser.parse_args()
 
     try:
@@ -29,11 +33,16 @@ def main() -> int:
         if "minimum-influence" in args.plot and not controller.record_minimum_influence:
             raise ValueError("minimum-influence plot requires recordMinimumInfluence: true in the JSON")
 
+        silence_plots = {"opinions-with-silence", "private-public"}
+        if args.tolerance_bands and silence_plots.isdisjoint(args.plot):
+            raise ValueError("--tolerance-bands requires opinions-with-silence or private-public")
+
         initial_matrix = controller.social_network.influence_matrix if "network" in args.plot else None
 
         controller.run_simulation()
 
         names = [agent.name for agent in controller.social_network.agents]
+        tolerance_radii = [agent.tolerance_radius for agent in controller.social_network.agents]
 
         for plot in args.plot:
             if plot == "opinions":
@@ -43,12 +52,17 @@ def main() -> int:
             elif plot == "opinions-with-silence":
                 View.plot_opinion_history_with_silence(
                     controller.opinion_history, controller.speaking_history, names,
-                    show_labels=args.agent_legend, show=False)
+                    show_labels=args.agent_legend, show=False,
+                    tolerance_radii=tolerance_radii,
+                    show_tolerance_bands=args.tolerance_bands)
 
             elif plot == "private-public":
                 View.plot_private_public_opinion_history(
                     controller.opinion_history, controller.public_opinion_history,
-                    controller.speaking_history, names, show_labels=args.agent_legend, show=False)
+                    controller.speaking_history, names,
+                    tolerance_radii=tolerance_radii,
+                    show_labels=args.agent_legend, show=False,
+                    show_tolerance_bands=args.tolerance_bands)
 
             elif plot == "network":
                 history = controller.influence_matrix_history or [initial_matrix]

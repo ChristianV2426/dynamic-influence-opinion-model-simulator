@@ -4,33 +4,33 @@
   "recordInfluenceHistory": true,
   "distributionFunction": {"type": "gaussian", "c": 10},
   "agents": [
-    {"name": "Agent1", "opinion": 1.0, "silenceMode": "memoryless", "toleranceRadius": 0.2, "majorityThreshold": 0.5, "dynamicInfluence": true},
-    {"name": "Agent2", "opinion": 0.8, "silenceMode": "memoryless", "toleranceRadius": 0.15, "majorityThreshold": 0.5, "dynamicInfluence": true},
-    {"name": "Agent3", "opinion": 0.5, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true},
-    {"name": "Agent4", "opinion": 0.2, "silenceMode": "memoryless", "toleranceRadius": 0.15, "majorityThreshold": 0.5, "dynamicInfluence": true},
-    {"name": "Agent5", "opinion": 0.0, "silenceMode": "memoryless", "toleranceRadius": 0.2, "majorityThreshold": 0.5, "dynamicInfluence": true}
+    {"name": "0", "opinion": 1.0, "silenceMode": "memoryless", "toleranceRadius": 0.2, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "1", "opinion": 0.8, "silenceMode": "memoryless", "toleranceRadius": 0.15, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "2", "opinion": 0.5, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "3", "opinion": 0.2, "silenceMode": "memoryless", "toleranceRadius": 0.15, "majorityThreshold": 0.5, "dynamicInfluence": true},
+    {"name": "4", "opinion": 0.0, "silenceMode": "memoryless", "toleranceRadius": 0.2, "majorityThreshold": 0.5, "dynamicInfluence": true}
   ],
   "edges": [
-    {"target": "Agent1", "source": "Agent1", "influence": 0.5},
-    {"target": "Agent1", "source": "Agent2", "influence": 0.4},
-    {"target": "Agent1", "source": "Agent3", "influence": 0.1},
+    {"target": "0", "source": "0", "influence": 0.5},
+    {"target": "0", "source": "1", "influence": 0.4},
+    {"target": "0", "source": "2", "influence": 0.1},
 
-    {"target": "Agent2", "source": "Agent1", "influence": 0.4},
-    {"target": "Agent2", "source": "Agent2", "influence": 0.5},
-    {"target": "Agent2", "source": "Agent3", "influence": 0.1},
+    {"target": "1", "source": "0", "influence": 0.4},
+    {"target": "1", "source": "1", "influence": 0.5},
+    {"target": "1", "source": "2", "influence": 0.1},
 
-    {"target": "Agent3", "source": "Agent1", "influence": 0.2},
-    {"target": "Agent3", "source": "Agent2", "influence": 0.2},
-    {"target": "Agent3", "source": "Agent3", "influence": 0.2},
-    {"target": "Agent3", "source": "Agent4", "influence": 0.2},
-    {"target": "Agent3", "source": "Agent5", "influence": 0.2},
+    {"target": "2", "source": "0", "influence": 0.2},
+    {"target": "2", "source": "1", "influence": 0.2},
+    {"target": "2", "source": "2", "influence": 0.2},
+    {"target": "2", "source": "3", "influence": 0.2},
+    {"target": "2", "source": "4", "influence": 0.2},
 
-    {"target": "Agent4", "source": "Agent3", "influence": 0.1},
-    {"target": "Agent4", "source": "Agent4", "influence": 0.5},
-    {"target": "Agent4", "source": "Agent5", "influence": 0.4},
+    {"target": "3", "source": "2", "influence": 0.1},
+    {"target": "3", "source": "3", "influence": 0.5},
+    {"target": "3", "source": "4", "influence": 0.4},
 
-    {"target": "Agent5", "source": "Agent3", "influence": 0.1},
-    {"target": "Agent5", "source": "Agent4", "influence": 0.4},
-    {"target": "Agent5", "source": "Agent5", "influence": 0.5}
+    {"target": "4", "source": "2", "influence": 0.1},
+    {"target": "4", "source": "3", "influence": 0.4},
+    {"target": "4", "source": "4", "influence": 0.5}
   ]
 }
