@@ -1,8 +1,8 @@
 {
   "mode": "custom",
-  "iterationLimit": 60,
+  "iterationLimit": 40,
   "recordInfluenceHistory": true,
-  "distributionFunction": {"type": "gaussian", "c": 20},
+  "distributionFunction": {"type": "gaussian", "c": 15},
   "agents": [
     {"name": "0", "opinion": 0.1, "silenceMode": "memoryless", "toleranceRadius": 0.1, "majorityThreshold": 0.5, "dynamicInfluence": true},
     {"name": "1", "opinion": 0.2, "silenceMode": "memoryless", "toleranceRadius": 0.05, "majorityThreshold": 0.5, "dynamicInfluence": true},
